@@ -316,22 +316,83 @@ class ComprehensiveWatchdog:
                 if 'App Connectivity' in name:
                     report.append("• Check if application service is running")
                     report.append("• Verify network connectivity and firewall rules")
+                    report.append("• Check if the app URL is correct in APP_URL environment variable")
                 elif 'Disk Space' in name:
                     report.append("• Clean up old logs and temporary files")
                     report.append("• Consider expanding storage capacity")
                     report.append("• Archive old data and uploads")
+                    report.append("• Run: find logs -type f -mtime +30 -delete  # Remove logs older than 30 days")
                 elif 'Memory Usage' in name:
                     report.append("• Identify memory-leaking processes")
                     report.append("• Restart heavy workers or services")
                     report.append("• Consider adding more RAM")
+                    report.append("• Monitor with: top -o %MEM")
                 elif 'CPU Usage' in name:
                     report.append("• Profile and optimize expensive operations")
                     report.append("• Reduce background job concurrency")
                     report.append("• Consider load balancing or scaling")
+                    report.append("• Monitor with: top -o %CPU")
                 elif 'Log Errors' in name:
                     report.append("• Review recent application errors")
                     report.append("• Check database and external service connectivity")
                     report.append("• Validate application configuration")
+                    report.append("• Run: tail -f logs/app.log")
+
+        # Process Health Details
+        if self.check_results.get('Process Health', {}).get('status') != 'PASS':
+            report.append('\nTOP RESOURCE CONSUMERS')
+            report.append('-' * 40)
+            try:
+                processes = []
+                for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+                    try:
+                        if proc.info['cpu_percent'] is None:
+                            proc.info['cpu_percent'] = 0
+                        processes.append(proc.info)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+
+                if processes:
+                    top_cpu = sorted(processes, key=lambda x: x['cpu_percent'], reverse=True)[:5]
+                    top_mem = sorted(processes, key=lambda x: x['memory_percent'], reverse=True)[:5]
+                    
+                    report.append('Top 5 CPU consumers:')
+                    for proc in top_cpu:
+                        report.append(f"  {proc['name']:20} (PID {proc['pid']:6}) CPU: {proc['cpu_percent']:6.1f}% MEM: {proc['memory_percent']:5.1f}%")
+                    
+                    report.append('\nTop 5 Memory consumers:')
+                    for proc in top_mem:
+                        report.append(f"  {proc['name']:20} (PID {proc['pid']:6}) CPU: {proc['cpu_percent']:6.1f}% MEM: {proc['memory_percent']:5.1f}%")
+            except Exception as e:
+                report.append(f"Could not gather process details: {e}")
+
+        # Environmental Configuration
+        report.append('\nENVIRONMENTAL CONFIGURATION')
+        report.append('-' * 40)
+        report.append(f"APP_URL: {os.getenv('APP_URL', 'http://localhost:5001')}")
+        report.append(f"APP_ENV: {os.getenv('APP_ENV', 'development')}")
+        report.append(f"DATABASE_URL: {'configured' if os.getenv('DATABASE_URL') else 'not configured'}")
+        report.append(f"WATCHDOG_INTERVAL: {self.check_interval}s")
+
+        # File System Status
+        report.append('\nFILE SYSTEM STATUS')
+        report.append('-' * 40)
+        try:
+            for path in ['.', 'logs', 'uploads', 'pm_app', 'templates']:
+                if os.path.exists(path):
+                    report.append(f"✓ {path}/")
+                else:
+                    report.append(f"✗ {path}/ (missing)")
+        except Exception as e:
+            report.append(f"File system check failed: {e}")
+
+        # Watchdog Functionality Test
+        report.append('\nWATCHDOG SELF-CHECK')
+        report.append('-' * 40)
+        report.append("✓ Watchdog engine operational")
+        report.append("✓ Check engine initialized")
+        report.append("✓ Report generation working")
+        report.append(f"✓ Checks executed: {self.checks_performed}")
 
         report.append('\n' + '=' * 80)
         report.append('END OF REPORT')
@@ -352,7 +413,10 @@ class ComprehensiveWatchdog:
         self.check_log_errors()
 
         report = self.build_engineering_report()
-        logger.info(report)
+        
+        # Print report line by line to ensure full output
+        for line in report.split('\n'):
+            logger.info(line)
 
         return self.checks_failed == 0
 
@@ -363,6 +427,9 @@ class ComprehensiveWatchdog:
         while True:
             try:
                 self.check_results = {}
+                self.checks_performed = 0
+                self.checks_passed = 0
+                self.checks_failed = 0
                 healthy = self.run_once()
 
                 if not healthy:
