@@ -1,0 +1,280 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="main-container">
+  <div class="page-utility-bar">
+    <a class="page-back-pill" href="{{ url_for('dashboard') }}">
+      <i class="bi bi-arrow-left"></i>
+      <span>Dashboard</span>
+    </a>
+  </div>
+
+  <div class="card mb-3" style="background: linear-gradient(135deg, rgba(74,158,255,0.05), rgba(94,92,230,0.05)); border: none; animation: slideDown 0.5s ease-out;">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <h1 class="mb-1" id="monthYearDisplay">{{ view_date.strftime('%B %Y') }}</h1>
+        <p class="text-muted mb-0"><i class="bi bi-calendar-event me-1"></i>PM calendar, holiday planner, and scheduling assistant.</p>
+      </div>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <button class="btn btn-outline-secondary btn-sm" id="prevMonthBtn" title="Previous month">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <span class="active-role-pill" id="todayPill" style="transition: all 0.3s;">
+          <i class="bi bi-calendar-week me-1"></i><span id="todayDateDisplay">{{ today.strftime('%d %b %Y') }}</span>
+        </span>
+        <button class="btn btn-outline-secondary btn-sm" id="nextMonthBtn" title="Next month">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+        <button class="btn btn-primary btn-sm ms-2" id="todayBtn" title="Jump to today">
+          <i class="bi bi-calendar-heart me-1"></i>Today
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3 shadow-sm" style="animation: slideUp 0.5s ease-out 0.1s backwards;">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+          <h5 class="mb-1">Selected day</h5>
+          <p class="text-muted mb-0" id="selectedDateLabel">{{ today.strftime('%A, %d %b %Y') }}</p>
+        </div>
+        <div class="badge bg-light text-dark px-3 py-2">Click a day to focus the planning view</div>
+      </div>
+      <div class="alert alert-light border mb-0" id="selectedDateSummary">
+        <i class="bi bi-info-circle me-1"></i>
+        Choose a date to inspect the schedule, plan PM work, and keep review activity aligned.
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3 shadow-sm" style="animation: slideUp 0.5s ease-out 0.1s backwards;">
+    <div class="card-body">
+      {# Calendar Grid #}
+      <div class="calendar-grid mb-3 fw-bold text-center text-muted" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px;">
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Mon</div>
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Tue</div>
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Wed</div>
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Thu</div>
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Fri</div>
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Sat</div>
+        <div style="padding: 12px 0; font-size: 0.9rem; font-weight: 600;">Sun</div>
+      </div>
+
+      <div class="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;" id="calendarDaysContainer">
+        {% for week in month_matrix %}
+          {% for day in week %}
+            {% set date_key = '%04d-%02d-%02d'|format(view_date.year, view_date.month, day) if day else '' %}
+            {% set is_today = day == today.day and view_date.year == today.year and view_date.month == today.month %}
+            {% set holiday = namespace(name='') %}
+            {% for item in holidays %}
+              {% if item.date == date_key %}
+                {% set holiday.name = item.name %}
+              {% endif %}
+            {% endfor %}
+            <div class="calendar-cell {% if holiday.name %}calendar-holiday{% endif %} {% if is_today %}calendar-today{% endif %}"
+                 data-day="{{ day }}" data-date="{{ date_key }}"
+                 tabindex="0"
+                 aria-label="{{ date_key or 'empty' }}"
+                 style="padding: 16px 8px; text-align: center; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 80px; display: flex; flex-direction: column; justify-content: center; {% if is_today %}background: linear-gradient(135deg, rgba(74,158,255,0.2), rgba(94,92,230,0.15)); border-color: #0a84ff; font-weight: 700;{% elif holiday.name %}background: rgba(255, 193, 7, 0.1); border-color: #ffc107;{% else %}background: var(--bs-gray-50); border-color: var(--bs-border-color);{% endif %}">
+              {% if day %}
+                <div class="fw-bold" style="font-size: 1.25rem; margin-bottom: 4px;">{{ day }}</div>
+                {% if holiday.name %}
+                  <small style="color: #ff9800; font-weight: 600;"><i class="bi bi-star-fill me-1" style="font-size: 0.85rem;"></i>{{ holiday.name }}</small>
+                {% else %}
+                  <small class="text-muted">{{ 'Today' if is_today else 'Scheduled' }}</small>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# Holiday Legend #}
+  <div class="card shadow-sm" style="background: linear-gradient(135deg, rgba(255,193,7,0.03), rgba(255,152,0,0.03)); animation: slideUp 0.5s ease-out 0.2s backwards;">
+    <div class="card-body">
+      <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Calendar Legend</h6>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 24px; height: 24px; background: linear-gradient(135deg, rgba(74,158,255,0.2), rgba(94,92,230,0.15)); border: 2px solid #0a84ff; border-radius: 4px;"></div>
+            <span class="text-muted small"><strong>Today</strong> — Current date</span>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 24px; height: 24px; background: rgba(255, 193, 7, 0.1); border: 2px solid #ffc107; border-radius: 4px;"></div>
+            <span class="text-muted small"><strong>Holiday</strong> — Public holiday or event</span>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 24px; height: 24px; background: var(--bs-gray-50); border: 2px solid var(--bs-border-color); border-radius: 4px;"></div>
+            <span class="text-muted small"><strong>Regular Day</strong> — Workday</span>
+          </div>
+        </div>
+      </div>
+      <small class="text-muted d-block mt-3"><i class="bi bi-lightbulb me-1"></i>Click on any day to view or schedule PM tasks for that date.</small>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .calendar-cell {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calendar-cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.05));
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .calendar-cell:hover::before {
+    opacity: 1;
+  }
+
+  .calendar-cell:hover:not(.calendar-today) {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .calendar-cell.calendar-today {
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
+  }
+
+  .calendar-cell.calendar-selected {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+    border-color: rgba(74, 158, 255, 0.8);
+  }
+
+  .calendar-cell:active {
+    transform: scale(0.98);
+  }
+
+  body[data-theme="dark"] .calendar-cell {
+    background: var(--bs-gray-900) !important;
+  }
+
+  body[data-theme="dark"] .calendar-cell.calendar-today {
+    background: linear-gradient(135deg, rgba(74,158,255,0.3), rgba(94,92,230,0.2)) !important;
+  }
+
+  body[data-theme="dark"] .calendar-cell.calendar-holiday {
+    background: rgba(255, 193, 7, 0.15) !important;
+  }
+</style>
+
+<script>
+  (function() {
+    const monthYearDisplay = document.getElementById('monthYearDisplay');
+    const selectedDateLabel = document.getElementById('selectedDateLabel');
+    const selectedDateSummary = document.getElementById('selectedDateSummary');
+    const calendarCells = document.querySelectorAll('.calendar-cell[data-day]');
+    const viewMonth = {{ view_date.month }};
+    const viewYear = {{ view_date.year }};
+    const currentMonth = {{ today.month }};
+    const currentYear = {{ today.year }};
+
+    function buildUrl(targetMonth, targetYear) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('month', String(targetMonth));
+      url.searchParams.set('year', String(targetYear));
+      return url.toString();
+    }
+
+    function formatShortDate(dateString) {
+      if (!dateString) return 'Choose a day';
+      const date = new Date(`${dateString}T00:00:00`);
+      return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+    }
+
+    function selectCell(cell) {
+      calendarCells.forEach(item => item.classList.remove('calendar-selected'));
+      cell.classList.add('calendar-selected');
+      cell.focus();
+      const date = cell.dataset.date;
+      if (selectedDateLabel) {
+        selectedDateLabel.textContent = formatShortDate(date);
+      }
+      if (selectedDateSummary) {
+        selectedDateSummary.innerHTML = `<i class="bi bi-check2-circle me-1"></i>Focused on <strong>${formatShortDate(date)}</strong>. Use the arrows to browse adjacent months and return to today anytime.`;
+      }
+    }
+
+    calendarCells.forEach(cell => {
+      cell.addEventListener('click', function() {
+        if (!this.dataset.date) {
+          return;
+        }
+        selectCell(this);
+      });
+
+      cell.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.click();
+        }
+      });
+    });
+
+    const initialSelection = Array.from(calendarCells).find(cell => cell.classList.contains('calendar-today')) || calendarCells[0];
+    if (initialSelection) {
+      selectCell(initialSelection);
+    }
+
+    document.getElementById('prevMonthBtn')?.addEventListener('click', function() {
+      const current = new Date(viewYear, viewMonth - 1, 1);
+      window.location.href = buildUrl(current.getMonth() + 1, current.getFullYear());
+    });
+
+    document.getElementById('nextMonthBtn')?.addEventListener('click', function() {
+      const current = new Date(viewYear, viewMonth + 1, 1);
+      window.location.href = buildUrl(current.getMonth() + 1, current.getFullYear());
+    });
+
+    document.getElementById('todayBtn')?.addEventListener('click', function() {
+      window.location.href = buildUrl(currentMonth, currentYear);
+    });
+
+    if (monthYearDisplay) {
+      monthYearDisplay.style.transition = 'opacity 0.2s ease';
+    }
+  })();
+</script>
+
+{% endblock %}

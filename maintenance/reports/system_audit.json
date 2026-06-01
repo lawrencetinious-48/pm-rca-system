@@ -1,0 +1,120 @@
+{
+  "status": "PASS",
+  "critical_failures": [],
+  "warnings": [
+    "migration_out_of_date",
+    "redis_unavailable"
+  ],
+  "repair": {
+    "attempted": true,
+    "created_admin": true,
+    "bootstrap_complete": true,
+    "skipped_reason": null,
+    "error": null
+  },
+  "route_summary": {
+    "200": 7,
+    "302": 93,
+    "301": 0,
+    "303": 0,
+    "307": 0,
+    "308": 0,
+    "400": 3,
+    "404": 13,
+    "500": 0,
+    "ERROR": 0,
+    "403": 1
+  },
+  "db_summary": {
+    "available": true,
+    "database_url": "sqlite:///C:\\Users\\Admin\\AppData\\Local\\Temp\\tmpebdc3kqd\\repair_cli.sqlite",
+    "tables": {
+      "users": true,
+      "bootstrap_state": true,
+      "activities": true,
+      "consumables": true,
+      "messages": true,
+      "form_assignments": true,
+      "user_settings": true,
+      "audit_logs": true
+    },
+    "required_tables_present": true,
+    "admin_exists": true,
+    "bootstrap_complete": true,
+    "user_count": 1,
+    "roles": [
+      "admin"
+    ],
+    "migration_table_exists": false,
+    "migration_revision": null,
+    "latest_revision": "ec1607f1340a_add_password_reset_tokens_table",
+    "migration_up_to_date": false,
+    "error": null
+  },
+  "filesystem_summary": {
+    "uploads": {
+      "exists": true,
+      "is_dir": true,
+      "writable": true,
+      "path": "C:\\Users\\Admin\\Desktop\\pm\\pm_app\\uploads"
+    },
+    "photo": {
+      "exists": true,
+      "is_dir": true,
+      "writable": true,
+      "path": "C:\\Users\\Admin\\Desktop\\pm\\pm_app\\photo"
+    },
+    "logs": {
+      "exists": true,
+      "is_dir": true,
+      "writable": true,
+      "path": "C:\\Users\\Admin\\Desktop\\pm\\logs"
+    },
+    "instance_signatures": {
+      "exists": true,
+      "is_dir": true,
+      "writable": true,
+      "path": "C:\\Users\\Admin\\Desktop\\pm\\instance\\signatures"
+    },
+    "maintenance_reports": {
+      "exists": true,
+      "is_dir": true,
+      "writable": true,
+      "path": "C:\\Users\\Admin\\Desktop\\pm\\maintenance\\reports"
+    }
+  },
+  "service_summary": {
+    "redis": {
+      "available": false,
+      "url": "redis://localhost:6379/0",
+      "error": "TimeoutError: Timeout connecting to server"
+    },
+    "smtp": {
+      "available": true,
+      "host": "smtp.gmail.com",
+      "error": null
+    },
+    "celery": {
+      "configured": true,
+      "broker_url": "redis://localhost:6379/0"
+    }
+  },
+  "security_summary": {
+    "secret_key": {
+      "configured": true,
+      "strong": true,
+      "value": "***redacted***"
+    },
+    "debug_disabled": false,
+    "secure_cookies": false,
+    "csrf_ready": true
+  },
+  "environment_summary": {
+    "app_env": "development",
+    "dotenv_present": true,
+    "database_url_configured": true,
+    "public_base_url_configured": true,
+    "debug_disabled": false,
+    "session_cookie_secure": false
+  }
+}

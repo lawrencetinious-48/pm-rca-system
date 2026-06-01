@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pm_db}
+      POSTGRES_USER: ${POSTGRES_USER:-pm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pm_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pm-app:prod
+    env_file:
+      - .env.prod
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      SESSION_COOKIE_SECURE: "1"
+      REMEMBER_COOKIE_SECURE: "1"
+      SESSION_COOKIE_SAMESITE: "Lax"
+      SESSION_COOKIE_HTTPONLY: "1"
+      REMEMBER_COOKIE_SAMESITE: "Lax"
+      REMEMBER_COOKIE_HTTPONLY: "1"
+      PREFERRED_URL_SCHEME: "https"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads:rw
+      - ./logs:/app/logs:rw
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/sh -c 'curl -fsSf http://localhost:8000/health || exit 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  worker:
+    image: pm-app:prod
+    command: celery -A pm_app.celery worker --loglevel=info
+    env_file:
+      - .env.prod
+    depends_on:
+      - app
+      - redis
+    restart: unless-stopped
+
+  watchdog:
+    build: .
+    command: python -m pm_app.services.daily_reporter
+    env_file:
+      - .env.prod
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      WATCHDOG_ENABLED: "true"
+      REPORT_INTERVAL_MINUTES: "90"
+      WATCHDOG_SEND_PERIODIC_SUMMARY: "0"
+      WATCHDOG_SEND_ADMIN_DIGEST: "0"
+      REPORT_EMAIL: ${REPORT_EMAIL:-${ALERT_EMAIL_TO:-${ALERT_EMAIL_ADDRESS}}}
+      ALERT_EMAIL_ADDRESS: ${ALERT_EMAIL_ADDRESS}
+      ALERT_EMAIL_PASSWORD: ${ALERT_EMAIL_PASSWORD}
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-}
+      LOKI_URL: ${LOKI_URL:-}
+    volumes:
+      - ./logs:/app/logs:rw
+    depends_on:
+      - app
+      - redis
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - 80:80
+      - 443:443
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    driver: bridge

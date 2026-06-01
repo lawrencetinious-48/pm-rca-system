@@ -1,0 +1,47 @@
+{# 
+  Improved summary metric card macro.
+  Usage: 
+    {{ summary_metric_card(metric_value=123, metric_label="Total Users", 
+                           metric_col_class="col-12 col-md-4 col-xl-2",
+                           metric_card_class="border rounded-3 h-100",
+                           metric_body_class="",
+                           metric_value_class="fs-4 fw-semibold",
+                           metric_href=None) }}
+  Or use the old include style with context variables.
+#}
+
+{% macro summary_metric_card(metric_value, metric_label, metric_col_class='col-12 col-md-4 col-xl-2', 
+                             metric_card_class='border rounded-3 h-100', metric_body_class='',
+                             metric_value_class='fs-4 fw-semibold', metric_href=None, 
+                             metric_id=None, metric_aria_label=None) -%}
+<div class="{{ metric_col_class }}" {% if metric_id %}id="{{ metric_id }}"{% endif %}>
+  {% if metric_href %}
+  <a href="{{ metric_href }}" class="text-decoration-none text-reset d-block">
+  {% endif %}
+    <div class="{{ metric_card_class }}">
+      <div class="card-body {{ metric_body_class }}">
+        <div class="{{ metric_value_class }}">{{ metric_value }}</div>
+        <div class="text-muted small mt-1" {% if metric_aria_label %}aria-label="{{ metric_aria_label }}"{% endif %}>
+          {{ metric_label }}
+        </div>
+      </div>
+    </div>
+  {% if metric_href %}
+  </a>
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{# 
+  For backward compatibility when used as an include (not a macro call),
+  the following code will render using the current context variables.
+  This allows existing templates that include this file to keep working.
+#}
+{% if metric_value is defined and metric_label is defined %}
+  {{ summary_metric_card(metric_value, metric_label, 
+                         metric_col_class|default('col-12 col-md-4 col-xl-2'),
+                         metric_card_class|default('border rounded-3 h-100'),
+                         metric_body_class|default(''),
+                         metric_value_class|default('fs-4 fw-semibold'),
+                         metric_href|default(None)) }}
+{% endif %}

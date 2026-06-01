@@ -1,0 +1,83 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="technician-activity-view">
+  <section class="dashboard-hero-lite mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <h1 class="display-6 fw-bold">
+          {{ activity.activity_type|upper }} Form #{{ activity.id }}
+        </h1>
+        <p class="text-muted mb-0">
+          <i class="bi bi-person-circle me-1"></i>Submitted by you on
+          {{ activity.created_at.strftime('%Y-%m-%d %H:%M:%S') if activity.created_at else '' }}
+        </p>
+      </div>
+      <div>
+        {% if activity.approved_at and activity.is_approved %}
+          <span class="badge bg-success fs-6 px-3 py-2 rounded-pill">
+            <i class="bi bi-check-circle-fill me-1"></i>Approved
+          </span>
+        {% elif activity.approved_at and not activity.is_approved %}
+          <span class="badge bg-danger fs-6 px-3 py-2 rounded-pill">
+            <i class="bi bi-x-circle-fill me-1"></i>Rejected
+          </span>
+        {% else %}
+          <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill">
+            <i class="bi bi-clock-history me-1"></i>Pending Review
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      {# Action buttons #}
+      <div class="d-flex flex-wrap gap-2 mb-4 pb-2 border-bottom">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-house-door me-1"></i>Dashboard
+        </a>
+        <a href="{{ url_for('technician_rejected_reports') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Rejected Reports
+        </a>
+        <a href="{{ url_for('download_activity', activity_id=activity.id) }}" class="btn btn-outline-primary" download data-no-loader>
+          <i class="bi bi-download me-1"></i>Download PDF
+        </a>
+      </div>
+
+      {# Additional metadata (risk score, SLA deadline) if available #}
+      {% if activity.risk_score is not none or activity.sla_deadline %}
+        <div class="row g-3 mb-4">
+          {% if activity.risk_score is not none %}
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3">
+                <div class="small text-muted text-uppercase">Risk Score</div>
+                <div class="d-flex align-items-baseline gap-2">
+                  <span class="fs-1 fw-bold">{{ activity.risk_score }}</span>
+                  <span class="badge {% if activity.risk_score >= 70 %}bg-danger{% elif activity.risk_score >= 40 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                    {% if activity.risk_score >= 70 %}High{% elif activity.risk_score >= 40 %}Medium{% else %}Low{% endif %}
+                  </span>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+          {% if activity.sla_deadline %}
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded-3">
+                <div class="small text-muted text-uppercase">SLA Deadline</div>
+                <div class="fs-4 fw-semibold">
+                  {{ activity.sla_deadline.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {# Full form view (includes all fields, photos, signature) #}
+      {% include '_pm_form_view.html' %}
+    </div>
+  </div>
+</div>
+{% endblock %}

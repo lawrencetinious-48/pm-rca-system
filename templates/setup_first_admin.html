@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create First Admin Account - Infinite Technologies</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        :root {
+            --brand: #1f4fd0;
+            --brand-2: #8b5cf6;
+            --ink: #0f172a;
+            --muted: #475569;
+            --panel: rgba(255, 255, 255, 0.96);
+            --line: rgba(148, 163, 184, 0.28);
+            --shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(circle at top left, rgba(59, 130, 246, 0.28), transparent 18%),
+                radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.24), transparent 20%),
+                linear-gradient(135deg, #0f172a 0%, #111827 45%, #1d4ed8 100%);
+            color: var(--ink);
+        }
+
+        .setup-shell {
+            width: min(980px, 100%);
+            display: grid;
+            grid-template-columns: 1.05fr 1fr;
+            gap: 0;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            background: var(--panel);
+            backdrop-filter: blur(16px);
+        }
+
+        .setup-hero {
+            padding: 40px;
+            background:
+                linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(79, 70, 229, 0.92));
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            width: fit-content;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-title {
+            font-size: 2rem;
+            line-height: 1.15;
+            margin: 18px 0 12px;
+        }
+
+        .hero-copy {
+            margin: 0;
+            color: rgba(255,255,255,0.92);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .hero-checks {
+            margin-top: 28px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .check-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            font-size: 0.98rem;
+            color: rgba(255,255,255,0.95);
+        }
+
+        .check-item .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 7px;
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 0 0 6px rgba(255,255,255,0.16);
+        }
+
+        .setup-form-area {
+            padding: 34px 36px;
+        }
+
+        .setup-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: start;
+            margin-bottom: 18px;
+        }
+
+        .setup-header h1 {
+            margin: 0;
+            font-size: 1.7rem;
+            line-height: 1.2;
+            color: var(--ink);
+        }
+
+        .setup-header p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.98rem;
+        }
+
+        .badge-soft {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .info-card {
+            display: flex;
+            gap: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.18);
+            border-radius: 18px;
+            padding: 14px 16px;
+            background: linear-gradient(180deg, rgba(239,246,255,0.95), rgba(255,255,255,0.96));
+            margin-bottom: 18px;
+        }
+
+        .info-card strong {
+            display: block;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+            color: #0f172a;
+        }
+
+        .info-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.6;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .form-group {
+            margin: 0 0 14px;
+        }
+
+        .form-grid .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--ink);
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            font-size: 0.99rem;
+            background: rgba(248,250,252,0.95);
+            color: var(--ink);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: rgba(37, 99, 235, 0.8);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
+        }
+
+        .form-hint {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .password-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .button-group {
+            margin-top: 24px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            border: 0;
+            border-radius: 16px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            cursor: pointer;
+            box-shadow: 0 16px 30px rgba(37, 99, 235, 0.24);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 36px rgba(37, 99, 235, 0.28);
+        }
+
+        .flash-message,
+        .success-message,
+        .error-message {
+            margin-top: 14px;
+            border-radius: 16px;
+            padding: 12px 14px;
+            font-size: 0.94rem;
+        }
+
+        .flash-message,
+        .success-message {
+            background: #ecfdf5;
+            border: 1px solid #86efac;
+            color: #14532d;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        @media (max-width: 880px) {
+            .setup-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .setup-hero {
+                padding: 28px 24px;
+            }
+
+            .setup-form-area {
+                padding: 26px 22px 30px;
+            }
+
+            .form-grid,
+            .password-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-shell">
+        <section class="setup-hero">
+            <div>
+                <span class="hero-badge">⚙️ Initial setup</span>
+                <h2 class="hero-title">Create your first administrator account</h2>
+                <p class="hero-copy">
+                    This account will control the full PM management system, including user management, approvals, and operational oversight.
+                </p>
+
+                <div class="hero-checks">
+                    <div class="check-item"><span class="dot"></span><span>Secure login credentials for your first admin.</span></div>
+                    <div class="check-item"><span class="dot"></span><span>Role-based access control for the entire deployment.</span></div>
+                    <div class="check-item"><span class="dot"></span><span>Clean, guided setup without unnecessary upload steps.</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="setup-form-area">
+            <div class="setup-header">
+                <div>
+                    <p class="badge-soft">Infinite Technologies PM Management System v1.0.0</p>
+                    <h1>Set up your primary admin</h1>
+                    <p>Fill in the details below to unlock the system.</p>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div>
+                    <strong>Welcome!</strong>
+                    <p>You are creating the first administrator account for this deployment. This account will have full system access and control.</p>
+                </div>
+            </div>
+
+            {% if message %}
+                <div class="success-message">{{ message }}</div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="name">Full Name *</label>
+                        <input type="text" id="name" name="name" placeholder="e.g., John Smith" required maxlength="100">
+                        <div class="form-hint">Your full name as it should appear in the system.</div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" placeholder="e.g., admin@example.com" required maxlength="150">
+                        <div class="form-hint">Corporate email address used for login.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select id="gender" name="gender">
+                            <option value="">-- Select Gender (Optional) --</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                            <option value="prefer_not_to_say">Prefer not to say</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" name="age" placeholder="e.g., 35" min="16" max="120">
+                        <div class="form-hint">Optional administrator age.</div>
+                    </div>
+                </div>
+
+                <div class="password-row">
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" name="password" placeholder="Enter a strong password" required minlength="8">
+                        <div class="form-hint">Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password_confirm">Confirm Password *</label>
+                        <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirm your password" required minlength="8">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-submit">Create Admin Account</button>
+                </div>
+
+                {% if error %}
+                    <div class="error-message">{{ error }}</div>
+                {% endif %}
+            </form>
+        </section>
+    </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('password_confirm').value;
+
+            if (password !== confirm) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return false;
+            }
+
+            if (password.length < 8) {
+                e.preventDefault();
+                alert('Password must be at least 8 characters long!');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>

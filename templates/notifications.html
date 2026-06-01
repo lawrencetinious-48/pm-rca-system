@@ -1,0 +1,224 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="notifications-board">
+  <div class="notifications-headline d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="mb-1"><i class="bi bi-bell-fill me-2"></i>Notifications & Messages</h1>
+      <p class="text-muted mb-0">Review team updates, send focused messages, and keep the inbox easy to scan.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-3">
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-primary-subtle text-primary"><i class="bi bi-inbox me-1"></i>Inbox</span>
+            <span class="text-muted small">{{ messages|length }} total</span>
+          </div>
+          <h3 class="mb-1">{{ messages|length }}</h3>
+          <p class="text-muted mb-0">Messages currently available for quick review.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-pencil-square me-1"></i>Composer</span>
+            <span class="text-muted small">Actionable</span>
+          </div>
+          <h3 class="mb-1">Ready</h3>
+          <p class="text-muted mb-0">Send updates to the exact role or individual recipient.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-shield-check me-1"></i>Cleanup</span>
+            <span class="text-muted small">Delete ready</span>
+          </div>
+          <h3 class="mb-1">Managed</h3>
+          <p class="text-muted mb-0">Each message now has a clear delete action and stronger visual hierarchy.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-xl-5">
+      <div class="card mt-3 shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-pencil-square"></i>Message Pad
+          </h5>
+          <form method="post" action="{{ url_for('send_system_message') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Send To</label>
+              <select class="form-select" name="recipient_role" required>
+                {% for option in recipient_options %}
+                  <option value="{{ option }}">{{ option|replace('_', ' ')|title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Message</label>
+              <textarea class="form-control" name="message_body" rows="4" placeholder="Share a task update, review note, or urgent reminder..." required></textarea>
+              <div class="form-text">Keep the message short and action-focused for faster replies.</div>
+            </div>
+            <div class="col-12 text-end">
+              <button class="btn btn-primary px-4" type="submit">
+                <i class="bi bi-send-fill me-1"></i>Send Message
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-7">
+      <div class="card mt-3 shadow-sm border-0">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              <h5 class="mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-inbox-fill"></i>Inbox Messages
+              </h5>
+              <p class="text-muted small mb-0">Expand each card to read the full note, then delete when it is no longer needed.</p>
+            </div>
+            <span class="badge text-bg-light px-3 py-2 rounded-pill">
+              {{ messages|length }} message{% if messages|length != 1 %}s{% endif %}
+            </span>
+          </div>
+
+          {% if messages %}
+            <div class="notification-list-container" style="max-height: 560px; overflow-y: auto;">
+              <div class="list-group notification-list gap-2" id="inboxMessageList">
+                {% for msg in messages %}
+                  {% set can_delete = current_user.role in ['technician', 'staff', 'manager', 'general_manager', 'developer', 'admin'] %}
+                  <div class="list-group-item border-0 rounded-3 shadow-sm p-0 overflow-hidden message-item">
+                    <div class="p-3">
+                      <div class="d-flex justify-content-between gap-2 align-items-start flex-wrap">
+                        <button type="button" class="btn btn-link text-start p-0 flex-grow-1 message-toggle-btn" data-target="msg-body-{{ loop.index }}" aria-expanded="false">
+                          <div class="d-flex flex-column gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                              <span class="badge bg-primary-subtle text-primary">{{ msg.sender_role|upper }}</span>
+                              {% if msg.recipient_email %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis">TO {{ msg.recipient_email }}</span>
+                              {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis">TO {{ msg.recipient_role|upper }}</span>
+                              {% endif %}
+                              <span class="badge bg-light text-dark">New</span>
+                            </div>
+                            <div>
+                              <div class="fw-semibold">{{ msg.sender_email }}</div>
+                              <div class="text-muted small mt-1">{{ msg.body[:90] }}{% if msg.body|length > 90 %}…{% endif %}</div>
+                            </div>
+                          </div>
+                        </button>
+                        <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                          <span class="text-muted small">{{ msg.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                          <i class="bi bi-chevron-down message-chevron"></i>
+                          {% if can_delete %}
+                            <form method="post" action="{{ url_for('delete_system_message', message_id=msg.id) }}"
+                                  data-no-loader
+                                  data-confirm-message="Are you sure you want to delete this message from your inbox?"
+                                  data-confirm-title="Delete Message" data-confirm-label="Yes, delete">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                              <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash-fill me-1"></i>Delete
+                              </button>
+                            </form>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="message-full-body px-3 pb-3" id="msg-body-{{ loop.index }}" hidden>
+                      <div class="border-start border-3 border-primary ps-3 py-2 bg-light rounded" style="white-space: pre-wrap;">
+                        {{ msg.body }}
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-1"></i>
+              <p class="mt-2 mb-0">Your inbox is empty.</p>
+              <small>Messages sent to your role or directly to you will appear here.</small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function() {
+    document.querySelectorAll('.message-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const targetId = this.getAttribute('data-target');
+        const body = document.getElementById(targetId);
+        const chevron = this.querySelector('.message-chevron');
+        if (!body) return;
+        const isHidden = body.hidden;
+        body.hidden = !isHidden;
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        this.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+      });
+    });
+  })();
+</script>
+
+<style>
+  .message-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .message-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .message-toggle-btn {
+    text-align: left;
+    width: 100%;
+  }
+
+  .message-toggle-btn:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+  }
+
+  .message-chevron {
+    transition: transform 0.2s ease;
+  }
+
+  .notification-list-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .notification-list-container::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+    border-radius: 999px;
+  }
+
+  @media (max-width: 768px) {
+    .notifications-headline {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}

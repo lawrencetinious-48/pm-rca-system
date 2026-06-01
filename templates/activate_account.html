@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-layout">
+        <!-- Side Panel -->
+        <aside class="login-side-panel">
+            <nav class="login-role-menu">
+                <h4 style="margin-bottom: 1.5rem; color: #333;">Account Activation</h4>
+                <p style="font-size: 0.95rem; color: #666; line-height: 1.6;">
+                    Set a secure password to activate your account and get started.
+                </p>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="login-form-container">
+            <div class="login-card">
+                <div class="login-card-header">
+                    <h1>Activate Your Account</h1>
+                    <p>Set your password below</p>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" class="login-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="form-control" 
+                            value="{{ email }}" 
+                            disabled
+                        >
+                        <small class="form-text text-muted">This cannot be changed</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="password-input-group">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password"
+                                class="form-control" 
+                                placeholder="Enter password (min 8 characters)"
+                                required
+                            >
+                            <button type="button" class="password-toggle" onclick="togglePassword('password', 'toggle-icon-1')">
+                                <i id="toggle-icon-1" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <small class="form-text text-muted">Minimum 8 characters</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <div class="password-input-group">
+                            <input 
+                                type="password" 
+                                id="confirm_password" 
+                                name="confirm_password"
+                                class="form-control" 
+                                placeholder="Confirm password"
+                                required
+                            >
+                            <button type="button" class="password-toggle" onclick="togglePassword('confirm_password', 'toggle-icon-2')">
+                                <i id="toggle-icon-2" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Activate Account</button>
+                </form>
+
+                <div class="login-footer">
+                      <p>Already have access? <a href="{{ url_for('login') }}">Back to login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(fieldId, iconId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(iconId);
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

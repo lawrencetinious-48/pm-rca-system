@@ -1,0 +1,271 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+{% from '_feature_cards.html' import feature_card %}
+
+<div class="settings-page">
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <i class="bi bi-gear-fill fs-2 text-primary"></i>
+    <h1 class="mb-0">{{ t.settings_title }}</h1>
+  </div>
+
+  <div class="row g-4 settings-grid">
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# SLA POLICY CONTROL (only for users with permission)                        #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {% if can_manage_sla %}
+      <div class="col-12">
+        <div class="card settings-card sla-settings-card shadow-sm border-0">
+          <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+              <div>
+                <h5 class="settings-card-title d-flex align-items-center gap-2">
+                  <i class="bi bi-alarm-fill text-primary"></i>
+                  <span>SLA Policy Control</span>
+                </h5>
+                <p class="text-muted mb-0">Desk teams and managers can control the live SLA window used for new PM/RCA submissions.</p>
+              </div>
+              <div class="text-end">
+                <span class="badge {% if active_sla_policy.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6 px-3 py-2">
+                  {% if active_sla_policy.enabled %}SLA Active{% else %}SLA Inactive{% endif %}
+                </span>
+                <div class="small text-muted mt-1">
+                  Updated by {{ active_sla_policy.updated_by }}
+                  {% if active_sla_policy.updated_role and active_sla_policy.updated_role != 'system' %}
+                    ({{ active_sla_policy.updated_role|replace('_', ' ')|title }})
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-12 col-xl-7">
+                <form method="post" class="row g-3">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="save_section" value="sla_policy">
+                  <input type="hidden" name="theme" value="{{ app_theme }}">
+                  <input type="hidden" name="language" value="{{ app_language }}">
+
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">SLA Mode</label>
+                    <select class="form-select" name="sla_enabled">
+                      <option value="active" {% if current_sla_policy.enabled %}selected{% endif %}>Activate SLA</option>
+                      <option value="inactive" {% if not current_sla_policy.enabled %}selected{% endif %}>Deactivate SLA</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Standard PM Hours</label>
+                    <input type="number" min="1" max="168" class="form-control" name="sla_standard_hours"
+                           value="{{ current_sla_policy.standard_hours }}" required>
+                    <div class="form-text">1‑168 hours</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Critical / RCA Hours</label>
+                    <input type="number" min="1" max="168" class="form-control" name="sla_critical_hours"
+                           value="{{ current_sla_policy.critical_hours }}" required>
+                    <div class="form-text">1‑168 hours</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Due Soon Window (hours)</label>
+                    <input type="number" min="1" max="72" class="form-control" name="sla_due_soon_hours"
+                           value="{{ current_sla_policy.due_soon_hours }}" required>
+                    <div class="form-text">1‑72 hours, ≤ SLA windows</div>
+                  </div>
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="sla_policy_agreed" id="slaPolicyAgreed" required>
+                      <label class="form-check-label" for="slaPolicyAgreed">
+                        I agree that this SLA policy will apply to new PM/RCA submissions and desk review prioritization.
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-12 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary px-4">
+                      <i class="bi bi-save me-1"></i>Save SLA Policy
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="col-12 col-xl-5">
+                <div class="sla-policy-panel bg-light rounded-3 p-3">
+                  <div class="row g-2 mb-3">
+                    <div class="col-4 text-center">
+                      <div class="small text-muted">Standard PM</div>
+                      <strong class="fs-4">{{ active_sla_policy.standard_hours }}h</strong>
+                    </div>
+                    <div class="col-4 text-center">
+                      <div class="small text-muted">Critical / RCA</div>
+                      <strong class="fs-4">{{ active_sla_policy.critical_hours }}h</strong>
+                    </div>
+                    <div class="col-4 text-center">
+                      <div class="small text-muted">Due Soon</div>
+                      <strong class="fs-4">{{ active_sla_policy.due_soon_hours }}h</strong>
+                    </div>
+                  </div>
+                  <div class="mt-2">
+                    <div class="fw-semibold mb-2">Policy</div>
+                    <ul class="ps-3 mb-0 small">
+                      <li>When active, new PM and RCA submissions receive SLA deadlines automatically.</li>
+                      <li>Critical or RCA items use the critical review window.</li>
+                      <li>Standard PM items use the standard review window.</li>
+                      <li>Items inside the due‑soon window are highlighted before breach.</li>
+                      <li>Overdue high‑risk items escalate automatically to desk leadership.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# LANGUAGE SELECTION                                                         #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    <div class="col-12 col-lg-6">
+      <div class="card settings-card h-100 shadow-sm border-0">
+        <div class="card-body p-4">
+          <h5 class="settings-card-title d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-translate text-primary"></i>
+            <span>{{ t.language }}</span>
+          </h5>
+          <p class="text-muted">{{ t.language_help }}</p>
+          <form method="post" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="col-12">
+              <label class="form-label fw-semibold">{{ t.choose_language }}</label>
+              <select class="form-select" name="language" id="langSelect" onchange="this.form.submit()">
+                {% for code, language in supported_languages.items() %}
+                  <option value="{{ code }}" {% if app_language == code %}selected{% endif %}>{{ language.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <input type="hidden" name="theme" value="{{ app_theme }}">
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# THEME / APPEARANCE                                                          #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    <div class="col-12 col-lg-6">
+      <div class="card settings-card h-100 shadow-sm border-0">
+        <div class="card-body p-4">
+          <h5 class="settings-card-title d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-circle-half text-primary"></i>
+            <span>{{ t.appearance }}</span>
+          </h5>
+          <p class="text-muted">{{ t.appearance_help }}</p>
+          <form method="post" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="theme-toggle" {% if app_theme == 'dark' %}checked{% endif %}>
+                <label class="form-check-label" for="theme-toggle">{{ t.dark_mode }}</label>
+              </div>
+              <input id="theme-hidden" type="hidden" name="theme" value="{{ app_theme }}">
+              <input type="hidden" name="language" value="{{ app_language }}">
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-brush me-1"></i>{{ t.apply_theme }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card settings-card h-100 shadow-sm border-0">
+        <div class="card-body p-4">
+          <h5 class="settings-card-title d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-key-fill text-primary"></i>
+            <span>Change Password</span>
+          </h5>
+          {% if current_user.role == 'admin' %}
+            <p class="text-muted mb-3">Only administrators can update passwords from this page. Use the admin user control tools to reset passwords for other users.</p>
+            <form method="post" class="row g-3">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="save_section" value="change_password">
+              <div class="col-12 col-lg-4">
+                <label class="form-label fw-semibold" for="current_password">Current Password</label>
+                <input id="current_password" type="password" name="current_password" class="form-control" autocomplete="current-password" required>
+              </div>
+              <div class="col-12 col-lg-4">
+                <label class="form-label fw-semibold" for="new_password">New Password</label>
+                <input id="new_password" type="password" name="new_password" class="form-control" autocomplete="new-password" required>
+              </div>
+              <div class="col-12 col-lg-4">
+                <label class="form-label fw-semibold" for="confirm_password">Confirm Password</label>
+                <input id="confirm_password" type="password" name="confirm_password" class="form-control" autocomplete="new-password" required>
+              </div>
+              <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="bi bi-shield-check me-1"></i>Update Password
+                </button>
+              </div>
+            </form>
+          {% else %}
+            <div class="alert alert-secondary mb-0">
+              <i class="bi bi-shield-exclamation me-2"></i>
+              Password changes are handled by an administrator. Contact your admin if you need to update your password.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# RELATED PAGES                                                              #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    <div class="col-12">
+      <div class="feature-group-title d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-link-45deg fs-5"></i>
+        <span>{{ t.related_pages }}</span>
+      </div>
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          {% call feature_card('Notifications', 'Notifications and messages live on their own dedicated page.', 'bi-bell-fill', notification_count ~ ' items') %}
+            <a href="{{ url_for('notifications') }}" class="btn btn-outline-primary">
+              <i class="bi bi-envelope-open me-1"></i>Open Notification Feed
+            </a>
+          {% endcall %}
+        </div>
+        {% if current_user.role in ['technician', 'staff', 'desk_staff', 'manager', 'general_manager'] %}
+          <div class="col-12 col-lg-6">
+            {% call feature_card('Calendar', 'PM day planning and holiday awareness now live on the calendar page.', 'bi-calendar3') %}
+              {% if current_user.role == 'technician' %}
+                {% set calendar_endpoint = 'technician_calendar' %}
+              {% else %}
+                {% set calendar_endpoint = 'staff_calendar' %}
+              {% endif %}
+              <a href="{{ url_for(calendar_endpoint) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-calendar-week me-1"></i>Open Calendar
+              </a>
+            {% endcall %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const toggle = document.getElementById('theme-toggle');
+    const hidden = document.getElementById('theme-hidden');
+    if (toggle && hidden) {
+      toggle.addEventListener('change', function() {
+        hidden.value = toggle.checked ? 'dark' : 'light';
+      });
+      hidden.value = toggle.checked ? 'dark' : 'light';
+    }
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soliton Telmec Preventative Maintenance</title>
+    <!-- Google Font & simple reset -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #07111f;
+            background-image: linear-gradient(rgba(7, 17, 31, 0.35), rgba(9, 20, 34, 0.45)), url('/static/background-watermark.jpeg');
+            background-size: cover;
+            background-position: center top;
+            background-repeat: no-repeat;
+            background-attachment: scroll;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .app-container {
+            max-width: 1280px;
+            width: 70%;
+            background: rgba(255, 255, 255, 0.94);
+            border-radius: 28px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+            padding: 2rem;
+        }
+
+        /* Brand header — consistent across both views */
+        .brand-bar {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .brand-left {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .soliton {
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: -0.02em;
+            color: #0a2942;
+        }
+
+        .telmec {
+            font-weight: 500;
+            font-size: 1.4rem;
+            color: #2c5f8a;
+            border-left: 2px solid #b0c8dd;
+            padding-left: 12px;
+        }
+
+        .tagline {
+            font-weight: 400;
+            color: #4a627a;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #e6edf5;
+            padding: 6px 14px;
+            border-radius: 40px;
+        }
+
+        /* two‑column layout for preview */
+        .screens-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        /* card styling */
+        .screen-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -8px rgba(10, 41, 66, 0.12), 0 8px 12px -4px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #e9eef3;
+            transition: transform 0.2s;
+            height: fit-content;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.8rem;
+            border-bottom: 1px solid #eef3f8;
+            background: #fafcff;
+        }
+
+        .card-header h2 {
+            font-weight: 600;
+            font-size: 1.5rem;
+            color: #143650;
+            letter-spacing: -0.01em;
+        }
+
+        .card-header .sub {
+            font-size: 0.9rem;
+            color: #5e7e9c;
+            margin-top: 4px;
+        }
+
+        .card-body {
+            padding: 2rem 1.8rem 2rem 1.8rem;
+        }
+
+        /* ----- login form ----- */
+        .login-form .field {
+            margin-bottom: 1.6rem;
+        }
+
+        .login-form label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1e3b58;
+            margin-bottom: 6px;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 1.5px solid #d4e0ea;
+            border-radius: 16px;
+            background: white;
+            transition: border 0.15s, box-shadow 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-form input:focus {
+            outline: none;
+            border-color: #2c6b9e;
+            box-shadow: 0 0 0 4px rgba(44, 107, 158, 0.12);
+        }
+
+        .login-btn {
+            background: #0a2942;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: default;  /* static demo, no actual login */
+            margin-top: 12px;
+            transition: background 0.15s;
+            border: 1px solid #0f3450;
+            letter-spacing: 0.3px;
+        }
+
+        .login-btn:hover {
+            background: #143e5e;  /* subtle, but still static */
+        }
+
+        .helper-note {
+            text-align: center;
+            margin-top: 18px;
+            color: #7089a3;
+            font-size: 0.85rem;
+        }
+
+        /* ----- dashboard elements ----- */
+        .dashboard-nav {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            background: #f2f6fb;
+            padding: 0.7rem 1.8rem;
+            border-bottom: 1px solid #dae3ec;
+        }
+
+        .nav-item {
+            font-weight: 500;
+            color: #1f4662;
+            font-size: 0.95rem;
+            cursor: default;
+            padding: 6px 0;
+        }
+
+        .nav-item.active {
+            color: #0a2942;
+            font-weight: 700;
+            border-bottom: 3px solid #0a2942;
+            margin-bottom: -1px;
+        }
+
+        .nav-right {
+            margin-left: auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .emergency-link {
+            color: #b13e3e;
+            font-weight: 600;
+            background: #fff0f0;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: default;
+            border: 1px solid #f3cfcf;
+        }
+
+        .logout-link {
+            color: #3f627c;
+            font-weight: 500;
+            cursor: default;
+            padding: 6px 8px;
+        }
+
+        .rca-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .rca-title {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #143650;
+        }
+
+        .rca-badge {
+            background: #eef3f8;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            color: #1f4a6e;
+            font-size: 0.9rem;
+        }
+
+        .notfound-area {
+            background: #fafbfd;
+            border-radius: 24px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            border: 1px dashed #b8cee2;
+            margin: 1rem 0 0.5rem;
+        }
+
+        .notfound-icon {
+            font-size: 3.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+            opacity: 0.6;
+        }
+
+        .notfound-text {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #1e3a54;
+            letter-spacing: -0.02em;
+        }
+
+        .notfound-hint {
+            color: #6b8aa8;
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+
+        .dashboard-footer-note {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #8da3b9;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* mobile adaptation */
+        @media (max-width: 760px) {
+            .screens-grid {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+            .brand-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+
+        /* fine details */
+        .caption-meta {
+            margin-top: 1.2rem;
+            color: #7a95ae;
+            font-size: 0.8rem;
+            text-align: center;
+            border-top: 1px solid #dfe8f0;
+            padding-top: 1.2rem;
+        }
+
+        .caption-meta span {
+            background: #ecf2f9;
+            padding: 3px 10px;
+            border-radius: 30px;
+        }
+
+        .preview-badge {
+            display: inline-block;
+            background: #d9e4ee;
+            border-radius: 20px;
+            padding: 2px 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #1e4f72;
+            letter-spacing: 0.4px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- Two screens side by side: Login & Dashboard -->
+    <div class="screens-grid">
+        <!-- LEFT: LOGIN SCREEN (Image 1) -->
+        <div class="screen-card">
+            <div class="card-header">
+                <h2>Sign in to Soliton Preventative Maintenance Services.</h2>
+                <div class="sub">Enter your details below.</div>
+            </div>
+            <div class="card-body">
+                <form class="login-form" method="POST" action="/login"> 
+                    <div class="field">
+                        <label>Email</label>
+                        <input type="email" name="email" placeholder="engineer@soliton.telmec" required>
+                    </div>
+
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" name="password" placeholder="Enter password" required>
+                    </div>
+
+                    <button class="login-btn" type="submit">Login</button>
+
+                </form>
+                <div class="helper-note">
+                    🔒 Secure infrastructure portal
+                </div>
+            </div>
+            <div class="caption-meta">
+                <span>📱 WhatsApp Image 2026-04-22 at 01.26.02 · Login view</span>
+            </div>
+        </div>
+
+        <!-- RIGHT: DASHBOARD / RCA / NOT FOUND (Image 2) -->
+        <div class="screen-card">
+            <!-- Top navigation mimicking "Dashboard Emergency Contacts Logout" -->
+            <div class="dashboard-nav">
+                <span class="nav-item active">Dashboard</span>
+                <span class="nav-item">RCA</span>
+                <span class="nav-item">Reports</span>
+                <div class="nav-right">
+                    <span class="emergency-link">📞 Emergency Contacts</span>
+                    <span class="logout-link">↪ Logout</span>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- "Infrastructure Delivery RCA" heading -->
+                <div class="rca-header">
+                    <span class="rca-title">Infrastructure Delivery</span>
+                    <span class="rca-badge">RCA active</span>
+                </div>
+                
+                <!-- Main area: "Not Found" -->
+                <div class="notfound-area">
+                    <div class="notfound-icon">🔍</div>
+                    <div class="notfound-text">Not Found</div>
+                    <div class="notfound-hint">The requested RCA report or resource is unavailable.</div>
+                </div>
+
+                <!-- additional context to match the described screenshot (Dashboard / Emergency Contacts / Logout / Not Found) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+                    <div style="display: flex; gap: 16px;">
+                        <span style="background: #eef3f8; padding: 8px 18px; border-radius: 30px; font-size: 0.85rem; color:#1f4a6e;">📋 Last RCA: 2026-04-21</span>
+                    </div>
+                    <span style="color:#4d7ca1; font-size:0.85rem;">⚙️ IDP v2.4</span>
+                </div>
+                <!-- subtle hint: Dashboard / Emergency Contacts / Logout are already above -->
+                <div style="margin-top: 14px; font-size:0.8rem; color:#8ca6bf; border-top:1px solid #e2eaf2; padding-top: 14px; display:flex; gap:24px;">
+                    <span>🏠 Dashboard</span>
+                    <span>🆘 Emergency Contacts · on-call</span>
+                    <span>🚪 Logout</span>
+                    <span style="margin-left: auto;">❌ Not Found</span>
+                </div>
+            </div>
+            <div class="caption-meta">
+                <span>📱 2.jpeg · Infrastructure Delivery RCA · Not Found state</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional info: exactly as described, both views are represented -->
+    <div style="margin-top: 28px; font-size: 0.85rem; color: #426282; text-align: center; border-top: 1px solid #cfdde9; padding-top: 20px;">
+        ⚡ SOLITON TelmEC — Building Networks for Life · Static preview of described screens<br>
+        <span style="opacity:0.75">"that is how it should look like" — login & dashboard with RCA / Emergency Contacts / Logout / Not Found</span>
+    </div>
+</div>
+
+</body>
+</html>

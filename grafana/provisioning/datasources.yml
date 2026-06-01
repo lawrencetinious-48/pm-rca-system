@@ -1,0 +1,47 @@
+auth:
+  disable_login: false
+
+users:
+  - login: admin
+    password: admin123
+    orgId: 1
+    role: Admin
+
+orgs:
+  - name: Main
+    id: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: true
+
+dashboards:
+  - name: PM System Overview
+    folder: PM System
+    type: json
+    datasource: Prometheus
+    options:
+      path: /var/lib/grafana/dashboards/pm-overview.json
+
+notifiers:
+  - name: AlertManager
+    type: alertmanager
+    uid: alertmanager
+    settings:
+      url: http://alertmanager:9093

@@ -1,0 +1,189 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="role-dashboard-shell role-{{ (current_role or 'user')|replace('_', '-')|lower }}">
+  
+  {% set current_role_label = 'Admin' if current_role in ['developer','admin'] else ((current_role or 'user')|replace('_', ' ')|title) %}
+  {# Hero Section #}
+  <section class="dashboard-hero-lite mb-4">
+    <p class="text-muted small mb-2">{{ current_role_label }} workspace</p>
+    <h1 class="h3 mb-2">Workspace overview</h1>
+    <p class="text-muted mb-0">Monitor live activity, approvals, and SLA status from one place.</p>
+  </section>
+
+  {# ─────────────────────────────────────────────────────────────────────────── #}
+  {# MANAGER / GENERAL MANAGER DASHBOARD                                        #}
+  {# ─────────────────────────────────────────────────────────────────────────── #}
+  {% if current_role in ['manager', 'general_manager'] %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mt-1">
+      {# Stat cards #}
+      {% set stat_items = [
+        {'href': url_for('desk_activities', mode='rcas'), 'icon': 'bi-journal-check', 'value': pending_pm_rcas, 'label': 'PM RCAs To Review'},
+        {'href': url_for('desk_activities', mode='forms'), 'icon': 'bi-file-earmark-pdf', 'value': pending_pm_rcas + approved_pm_forms + rejected_pm_rcas, 'label': 'Total PM Forms'},
+        {'href': url_for('desk_activities', mode='rejected'), 'icon': 'bi-x-octagon', 'value': rejected_pm_rcas, 'label': 'Rejected PM RCAs'},
+        {'href': url_for('desk_activities', mode='rcas', risk='high'), 'icon': 'bi-exclamation-diamond', 'value': high_risk_pending_pm_rcas, 'label': 'High-Risk PM RCAs'},
+        {'href': url_for('desk_activities', mode='rcas', sla='overdue'), 'icon': 'bi-alarm', 'value': sla_overdue_pm_rcas, 'label': 'SLA Overdue'}
+      ] %}
+      {% for item in stat_items %}
+        <div class="col">
+          <a href="{{ item.href }}" class="card-link text-decoration-none">
+            <div class="card stats-card h-100">
+              <div class="card-body text-center">
+                <div class="stats-icon mx-auto mb-2"><i class="bi {{ item.icon }}"></i></div>
+                <h1 class="display-5 fw-bold">{{ item.value }}</h1>
+                <p class="text-muted mb-0">{{ item.label }}</p>
+              </div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+
+    {# Feature action cards #}
+    <div class="row row-cols-1 row-cols-md-2 g-3 mt-3">
+      {% set feature_items = [
+        {'title': 'Smart Review Center', 'text': 'Prioritize high-risk PM/RCA submissions, SLA overdue items, and recommendation-driven reviews.',
+         'href': url_for('desk_activities', mode='rcas'), 'btn_text': 'Open Smart Queue', 'icon': 'bi-lightning-charge', 'btn_class': 'btn-primary'},
+        {'title': 'Approved Forms Excel Tracker', 'text': 'Download approved PM/RCA forms with site info, risk score, SLA, and recommendations in Excel.',
+         'href': url_for('export_approved_forms_excel'), 'btn_text': 'Download Excel', 'icon': 'bi-file-earmark-excel', 'btn_class': 'btn-success'}
+      ] %}
+      {% for item in feature_items %}
+        <div class="col">
+          <div class="card feature-card h-100">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex align-items-start gap-3">
+                <div class="feature-card-icon flex-shrink-0">
+                  <i class="bi {{ item.icon }}"></i>
+                </div>
+                <div>
+                  <h3 class="h5 mb-1">{{ item.title }}</h3>
+                  <p class="text-muted mb-0">{{ item.text }}</p>
+                </div>
+              </div>
+              <div class="mt-3">
+                <a href="{{ item.href }}" class="btn {{ item.btn_class }} w-100">{{ item.btn_text }}</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if not staff_has_form_data %}
+      <div class="alert alert-info mt-3 mb-0" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>No recent forms have been submitted by field technicians yet. PM RCA, approved, and rejected lists will populate automatically after new submissions.
+      </div>
+    {% endif %}
+
+  {# ─────────────────────────────────────────────────────────────────────────── #}
+  {# DEVELOPER DASHBOARD                                                        #}
+  {# ─────────────────────────────────────────────────────────────────────────── #}
+  {% elif current_role == 'developer' %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mt-1">
+      {% set dev_items = [
+        {'href': url_for('admin_staff'), 'icon': 'bi-people-fill', 'value': dashboard_counts.users_total, 'label': 'Account Profiles'},
+        {'href': url_for('admin_user_control'), 'icon': 'bi-person-lock', 'value': dashboard_counts.blocked_users, 'label': 'Block / Unblock User'},
+        {'href': url_for('add_technician'), 'icon': 'bi-plus-circle', 'value': dashboard_counts.technician_users, 'label': 'Add Technician'},
+        {'href': url_for('add_staff'), 'icon': 'bi-plus-square', 'value': dashboard_counts.staff_users, 'label': 'Add Staff'},
+        {'href': url_for('add_manager'), 'icon': 'bi-person-workspace', 'value': dashboard_counts.manager_users, 'label': 'Add Manager'},
+        {'href': url_for('add_general_manager'), 'icon': 'bi-person-badge-fill', 'value': dashboard_counts.general_manager_users, 'label': 'Add General Manager'},
+        {'href': url_for('settings_page'), 'icon': 'bi-gear-fill', 'value': public_holidays|length, 'label': 'Settings & Holiday Entries'},
+        {'href': url_for('notifications'), 'icon': 'bi-bell-fill', 'value': notification_count, 'label': 'Unread System Notifications'}
+      ] %}
+      {% for item in dev_items %}
+        <div class="col">
+          <a href="{{ item.href }}" class="card-link text-decoration-none">
+            <div class="card stats-card h-100">
+              <div class="card-body text-center">
+                <div class="stats-icon mx-auto mb-2"><i class="bi {{ item.icon }}"></i></div>
+                <h1 class="display-5 fw-bold">{{ item.value }}</h1>
+                <p class="text-muted mb-0">{{ item.label }}</p>
+              </div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+
+  {# ─────────────────────────────────────────────────────────────────────────── #}
+  {# FALLBACK FOR UNKNOWN ROLES                                                 #}
+  {# ─────────────────────────────────────────────────────────────────────────── #}
+  {% else %}
+    <div class="alert alert-warning mt-3 mb-0" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>Your role “{{ current_role }}” does not have a custom dashboard yet. Please contact admin support.
+    </div>
+  {% endif %}
+
+  {# Footer / footnote #}
+  <p class="text-center text-muted small mt-4 mb-0">
+    Dashboard Footnote: {{ current_role_label }}
+  </p>
+
+  {# Live counts refresh script (only for roles that use dynamic counters) #}
+  {% if current_role in ['manager', 'general_manager', 'staff', 'technician'] %}
+  <script>
+    (function () {
+      const countNodes = document.querySelectorAll('[data-count-key]');
+      if (!countNodes.length) return;
+
+      function applyCounts(counts) {
+        countNodes.forEach(node => {
+          const key = node.getAttribute('data-count-key');
+          if (key && counts[key] !== undefined && counts[key] !== null) {
+            node.textContent = String(counts[key]);
+          }
+        });
+      }
+
+      let pollTimer = null;
+      let stopped = false;
+
+      function stopPolling() {
+        stopped = true;
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }
+
+      function refreshCounts() {
+        if (stopped) return;
+
+        fetch('{{ url_for("api_live_dashboard_counts") }}', {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+          redirect: 'manual'
+        })
+          .then(response => {
+            const isAuthRedirect = response.status === 401 || response.status === 403 || response.redirected || (response.status >= 300 && response.status < 400);
+            if (isAuthRedirect) {
+              const location = response.headers.get('Location');
+              stopPolling();
+              if (location) {
+                window.location.assign(location);
+              }
+              throw new Error('auth_required');
+            }
+            if (!response.ok) {
+              throw new Error('request_failed');
+            }
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+              stopPolling();
+              throw new Error('unexpected_content_type');
+            }
+            return response.json();
+          })
+          .then(payload => payload && payload.counts && applyCounts(payload.counts))
+          .catch(() => { /* keep existing numbers */ });
+      }
+
+      refreshCounts();
+      pollTimer = setInterval(refreshCounts, 45000);
+    })();
+  </script>
+  {% endif %}
+
+</div>
+{% endblock %}

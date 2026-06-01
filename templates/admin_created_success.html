@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Account Created - Infinite Technologies</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .success-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+        .success-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #27ae60;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 1.8em;
+        }
+        .header p {
+            color: #666;
+            margin: 10px 0 0 0;
+            font-size: 0.95em;
+        }
+        .divider {
+            height: 2px;
+            background: #667eea;
+            margin: 20px 0;
+        }
+        .details {
+            background: #f9f9f9;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 3px;
+        }
+        .detail-item {
+            margin: 10px 0;
+            color: #333;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+        .message-box {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            color: #2e7d32;
+            font-weight: 500;
+        }
+        .button-group {
+            margin-top: 30px;
+        }
+        a {
+            display: inline-block;
+            padding: 12px 40px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        a:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .info {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✓</div>
+        <div class="header">
+            <h1>Admin Account Created!</h1>
+            <p>Infinite Technologies PM Management System</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="message-box">
+            <strong>Thank you for creating your first admin account.</strong><br>
+            Your account is now ready to use. You will be redirected to the login page in a few moments.
+        </div>
+
+        <div class="details">
+            <div class="detail-item">
+                <span class="detail-label">Account Name:</span> {{ admin_name }}
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Email:</span> {{ admin_email }}
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Role:</span> Administrator
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Status:</span> Active
+            </div>
+        </div>
+
+        <div class="info">
+            <p><strong>What's Next?</strong></p>
+            <ul style="text-align: left;">
+                <li>Log in with your credentials</li>
+                <li>Configure system settings</li>
+                <li>Create additional user accounts</li>
+                <li>Set up roles and permissions</li>
+                <li>Begin managing your preventative maintenance operations</li>
+            </ul>
+        </div>
+
+        <div class="button-group">
+            <a href="{{ url_for('login') }}">Go to Login</a>
+        </div>
+
+        <div class="info">
+            <p>You will be automatically redirected to login in <span id="countdown">5</span> seconds...</p>
+        </div>
+    </div>
+
+    <script>
+        let count = 5;
+        setInterval(function() {
+            count--;
+            document.getElementById('countdown').textContent = count;
+            if (count <= 0) {
+                window.location.href = "{{ url_for('login') }}";
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

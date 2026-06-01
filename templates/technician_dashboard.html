@@ -1,0 +1,132 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+{% from '_feature_cards.html' import feature_card %}
+<div class="role-dashboard-shell role-technician">
+  <section class="dashboard-hero-lite mb-4">
+    <p class="text-muted small mb-2">Technician workspace</p>
+    <h1 class="h3 mb-2">Welcome, {{ current_user.display_name or current_user.email }}</h1>
+    <p class="text-muted mb-0">Hello {{ current_user.display_name or current_user.email }}, welcome to your workspace.</p>
+  </section>
+
+  {# Stats cards – responsive row #}
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mt-1">
+    <div class="col">
+      <a href="{{ url_for('technician_submissions', type='pm') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-tools"></i></div>
+            <h1 class="display-5 fw-bold">{{ technician_stats.pm }}</h1>
+            <p class="text-muted mb-0">PM Forms</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('technician_submissions', type='rca') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-exclamation-triangle"></i></div>
+            <h1 class="display-5 fw-bold">{{ technician_stats.rca }}</h1>
+            <p class="text-muted mb-0">RCA Forms</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('technician_submissions', type='all') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-journal-plus"></i></div>
+            <h1 class="display-5 fw-bold">{{ technician_stats.total }}</h1>
+            <p class="text-muted mb-0">Total PM/RCA</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('consumables') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-box-seam"></i></div>
+            <h1 class="display-5 fw-bold">{{ technician_stats.consumables }}</h1>
+            <p class="text-muted mb-0">Consumables</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('technician_rejected_reports') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-x-octagon"></i></div>
+            <h1 class="display-5 fw-bold">{{ technician_stats.rejected }}</h1>
+            <p class="text-muted mb-0">Rejected PM/RCA</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  {# Recent submissions (if provided by backend) #}
+  {% if recent_submissions %}
+    <section class="mt-4 mb-4">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-clock-history fs-4"></i>
+        <h3 class="mb-0">Recent Submissions</h3>
+      </div>
+      <div class="card shadow-sm border-0">
+        <div class="list-group list-group-flush">
+          {% for submission in recent_submissions %}
+            <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div>
+                <span class="badge {% if submission.activity_type == 'pm' %}bg-info{% else %}bg-warning text-dark{% endif %} me-2">
+                  {{ submission.activity_type|upper }}
+                </span>
+                <span class="text-muted small">#{{ submission.id }}</span>
+                <span class="ms-2">{{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+              </div>
+              <div>
+                {% if submission.is_approved %}
+                  <span class="badge bg-success">Approved</span>
+                {% elif submission.approved_at %}
+                  <span class="badge bg-danger">Rejected</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+                <a href="{{ url_for('technician_activity_view', activity_id=submission.id) }}" class="btn btn-sm btn-outline-primary ms-2">
+                  <i class="bi bi-eye"></i> View
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  {% endif %}
+
+  {# Work Tools – feature cards #}
+  <section class="mt-4 mb-4">
+    <div class="feature-group-title mb-3">
+      <i class="bi bi-tools me-2"></i>Work Tools
+    </div>
+    <div class="row row-cols-1 row-cols-lg-2 g-4">
+      <div class="col">
+        {% call feature_card('Technician Site Form', 'Fill and submit PM/RCA work from the field form.', 'bi-plus-circle') %}
+          <a href="{{ url_for('field_rca') }}" class="btn btn-primary w-100 w-sm-auto">
+            <i class="bi bi-journal-plus me-1"></i>Fill Form
+          </a>
+        {% endcall %}
+      </div>
+      <div class="col">
+        {% call feature_card('Settings', 'Manage language and appearance preferences.', 'bi-gear-fill') %}
+          <a href="{{ url_for('settings_page') }}" class="btn btn-outline-primary w-100 w-sm-auto">
+            <i class="bi bi-sliders me-1"></i>Open Settings
+          </a>
+        {% endcall %}
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

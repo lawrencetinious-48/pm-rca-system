@@ -1,0 +1,16 @@
+[Unit]
+Description=PM App (Gunicorn)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/pm
+Environment=DATABASE_URL=postgresql+psycopg://pm_user:password@127.0.0.1:5432/pm_db
+Environment=SECRET_KEY=changeme
+Environment=FLASK_ENV=production
+ExecStart=/usr/bin/docker-compose -f /srv/pm/docker-compose.prod.yml up --build
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

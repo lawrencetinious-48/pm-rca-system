@@ -1,0 +1,379 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+{% set is_forms_mode = view_mode == 'forms' %}
+{% set is_rejected_mode = view_mode == 'rejected' %}
+{% set is_rcas_mode = not is_forms_mode and not is_rejected_mode %}
+{% set type_filter = type_filter|default('') %}
+{% set review_filter = review_filter|default('') %}
+
+<section class="review-board">
+  {# Header #}
+  <div class="review-headline-card">
+    <h1>
+      {% if is_forms_mode and review_filter == 'reviewed' and type_filter == 'rca' %}Reviewed RCA Forms
+      {% elif is_forms_mode and review_filter == 'reviewed' and type_filter == 'pm' %}Reviewed PM Forms
+      {% elif is_forms_mode %}Total PM Forms
+      {% elif is_rejected_mode %}Rejected PM RCAs
+      {% else %}PM RCAs{% endif %}
+    </h1>
+    <p class="text-muted mb-0">
+      {% if is_forms_mode and review_filter == 'reviewed' and type_filter == 'rca' %}
+        Reviewed RCA submissions from the field team. Approved and rejected RCAs are shown here.
+      {% elif is_forms_mode and review_filter == 'reviewed' and type_filter == 'pm' %}
+        Reviewed PM submissions from the field team. Approved and rejected PM forms are shown here.
+      {% elif is_forms_mode %}
+        All PM/RCA forms submitted by the field team. Newest records appear first.
+      {% elif is_rejected_mode %}
+        Rejected PM/RCA forms from the field team. Newest records appear first.
+      {% else %}
+        Field-submitted PM/RCA forms waiting for desk or staff review. Newest submissions appear first.
+      {% endif %}
+    </p>
+  </div>
+
+  {# Mode switcher #}
+  <div class="card p-3 review-mode-card mt-3">
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn {% if is_rcas_mode %}btn-primary{% else %}btn-outline-primary{% endif %}"
+         href="{{ url_for('desk_activities', mode='rcas') }}">
+        <i class="bi bi-journal-check"></i> PM RCAs
+      </a>
+      <a class="btn {% if is_forms_mode %}btn-primary{% else %}btn-outline-primary{% endif %}"
+         href="{{ url_for('desk_activities', mode='forms') }}">
+        <i class="bi bi-file-earmark-pdf"></i> Total PM Forms
+      </a>
+      <a class="btn {% if is_rejected_mode %}btn-primary{% else %}btn-outline-primary{% endif %}"
+         href="{{ url_for('desk_activities', mode='rejected') }}">
+        <i class="bi bi-x-octagon"></i> Rejected PM RCAs
+      </a>
+      <a class="btn btn-outline-success" href="{{ url_for('desk_rca_tracker') }}">
+        <i class="bi bi-table"></i> Open RCA Tracker
+      </a>
+    </div>
+  </div>
+
+  {# Status legend #}
+  <div class="card p-3 review-status-card mt-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap" aria-label="Status legend">
+      <span class="text-muted small">Status:</span>
+      <span class="badge text-bg-warning">Pending</span>
+      <span class="badge text-bg-success">Approved</span>
+      <span class="badge text-bg-danger">Rejected</span>
+    </div>
+  </div>
+
+  {# Filters #}
+  <div class="card p-3 review-filter-card mt-3">
+    <form method="get" class="row g-2 align-items-end mb-0">
+      <input type="hidden" name="mode" value="{{ view_mode }}">
+      <input type="hidden" name="type" value="{{ type_filter }}">
+      <input type="hidden" name="review" value="{{ review_filter }}">
+      <div class="col-12 col-md-6 col-lg-5">
+        <label class="form-label">Search (site ID/number, technician name/email, form text, type, ID)</label>
+        <input type="text" class="form-control" name="q" value="{{ search_query or '' }}" placeholder="Search PM/RCA records">
+      </div>
+      <div class="col-12 col-md-4 col-lg-3">
+        <label class="form-label">Created date</label>
+        <input type="date" class="form-control" name="date" value="{{ created_on or '' }}">
+      </div>
+      <div class="col-12 col-md-3 col-lg-2">
+        <label class="form-label">Archive month</label>
+        <input type="month" class="form-control" name="month" value="{{ month_filter or '' }}">
+      </div>
+      <div class="col-12 col-md-3 col-lg-2">
+        <label class="form-label">Risk</label>
+        <select class="form-select" name="risk">
+          <option value="" {% if not risk_filter %}selected{% endif %}>All</option>
+          <option value="high" {% if risk_filter == 'high' %}selected{% endif %}>High</option>
+          <option value="medium" {% if risk_filter == 'medium' %}selected{% endif %}>Medium</option>
+          <option value="low" {% if risk_filter == 'low' %}selected{% endif %}>Low</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-3 col-lg-2">
+        <label class="form-label">SLA</label>
+        <select class="form-select" name="sla">
+          <option value="" {% if not sla_filter %}selected{% endif %}>All</option>
+          <option value="overdue" {% if sla_filter == 'overdue' %}selected{% endif %}>Overdue</option>
+          <option value="due_soon" {% if sla_filter == 'due_soon' %}selected{% endif %}>Due Soon</option>
+          <option value="on_track" {% if sla_filter == 'on_track' %}selected{% endif %}>On Track</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-2 col-lg-2 d-grid">
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </div>
+      <div class="col-12 col-lg-2 d-grid">
+        <a class="btn btn-outline-secondary" href="{{ url_for('desk_activities', mode=view_mode) }}">Clear</a>
+      </div>
+    </form>
+  </div>
+
+  {# SLA policy summary #}
+  <div class="card p-3 review-filter-card mt-3 sla-policy-summary-card">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+      <div>
+        <div class="small text-muted mb-1">Active Desk SLA Policy</div>
+        <div class="fw-semibold mb-1">
+          {% if active_sla_policy.enabled %}
+            {{ active_sla_policy.standard_hours }}h standard PM,
+            {{ active_sla_policy.critical_hours }}h critical/RCA,
+            due soon at {{ active_sla_policy.due_soon_hours }}h.
+          {% else %}
+            SLA is inactive for new PM/RCA submissions.
+          {% endif %}
+        </div>
+        <div class="small text-muted">Updated by {{ active_sla_policy.updated_by }}</div>
+      </div>
+      <a class="btn btn-outline-primary" href="{{ url_for('settings_page') }}">
+        <i class="bi bi-sliders"></i> Manage SLA Policy
+      </a>
+    </div>
+  </div>
+
+  {# Review items list #}
+  <div class="card p-3 review-table-card mt-3">
+    {% if review_rows %}
+      <div class="review-items-list">
+        {% for row in review_rows %}
+          {% set activity = row.activity %}
+          <div class="ticket-card shadow-sm border rounded-4 p-3 mb-3" data-activity-id="{{ activity.id }}">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+              <!-- LEFT -->
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                  <span class="badge bg-secondary">{{ activity.activity_type|upper }}</span>
+                  <span class="badge bg-{{ row.priority.badge }} text-{{ 'dark' if row.priority.badge == 'warning' else 'white' }}">
+                    <i class="bi bi-stars"></i> {{ row.priority.label }} Priority {{ row.priority.score }}
+                  </span>
+
+                  {# Risk badge #}
+                  {% if row.risk_score >= 70 %}
+                    <span class="badge bg-danger"><i class="bi bi-thermometer-high"></i> {{ row.risk_score }} · High</span>
+                  {% elif row.risk_score >= 40 %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-thermometer-half"></i> {{ row.risk_score }} · Medium</span>
+                  {% else %}
+                    <span class="badge bg-success"><i class="bi bi-thermometer-low"></i> {{ row.risk_score }} · Low</span>
+                  {% endif %}
+
+                  {# SLA state #}
+                  {% if row.sla_state == 'Overdue' %}
+                    <span class="badge bg-danger">SLA: Overdue</span>
+                  {% elif row.sla_state == 'Due Soon' %}
+                    <span class="badge bg-warning text-dark">SLA: Due Soon</span>
+                  {% elif row.sla_state == 'On Track' %}
+                    <span class="badge bg-success">SLA: On Track</span>
+                  {% elif row.sla_state == 'Resolved' %}
+                    <span class="badge bg-secondary">SLA: Resolved</span>
+                  {% else %}
+                    <span class="badge bg-light text-dark">SLA: Not Set</span>
+                  {% endif %}
+
+                  {# Approval status #}
+                  {% if activity.is_approved %}
+                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Approved</span>
+                  {% elif activity.approved_at %}
+                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rejected</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
+                  {% endif %}
+                </div>
+
+                <h5 class="mb-1 fw-bold">
+                  {{ row.site_number }}{% if row.site_name and row.site_name != '-' %} - {{ row.site_name }}{% endif %}
+                </h5>
+
+                <div class="text-muted small mb-2">
+                  {{ activity.activity_type|upper }} • Submitted by {{ activity.created_by or 'Unknown' }}
+                </div>
+
+                {% if row.issue_summary %}
+                <p class="mb-2 text-secondary small">
+                  {{ row.issue_summary }}
+                </p>
+                {% endif %}
+              </div>
+
+              <!-- RIGHT -->
+              <div class="text-md-end small">
+                <div class="mb-2">
+                  <div class="fw-semibold text-muted">Created</div>
+                  <div>{{ activity.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+
+                {% if activity.approved_at %}
+                <div class="mb-2">
+                  <div class="fw-semibold text-muted">Reviewed</div>
+                  <div>{{ activity.approved_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+                {% endif %}
+
+                {% if row.sla_deadline %}
+                <div>
+                  <div class="fw-semibold text-muted">SLA Due</div>
+                  <div class="{% if row.sla_state == 'Overdue' %}text-danger{% else %}text-body{% endif %} fw-bold">
+                    {{ row.sla_deadline.strftime('%Y-%m-%d %H:%M') }}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <hr>
+
+            <!-- FOOTER -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="small text-muted">
+                {% if row.top_recommendation %}
+                  <i class="bi bi-lightbulb text-warning me-1"></i>{{ row.top_recommendation }}
+                  {% if row.top_recommendation_source %}
+                    <small class="text-muted ms-2">({{ row.top_recommendation_source }})</small>
+                  {% endif %}
+                {% endif %}
+                {% if row.priority.reasons %}
+                  <div class="mt-1"><i class="bi bi-list-stars text-primary me-1"></i>{{ row.priority.reasons|join(' · ') }}</div>
+                {% endif %}
+              </div>
+
+              <div class="d-flex gap-1 flex-wrap">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('view_activity', activity_id=activity.id) }}" title="View form">
+                  <i class="bi bi-eye-fill"></i> View
+                </a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('download_activity', activity_id=activity.id) }}" title="Download PDF" download data-no-loader>
+                  <i class="bi bi-download"></i> PDF
+                </a>
+
+                <button type="button" class="btn btn-sm btn-outline-info triage-btn" data-activity-id="{{ activity.id }}" data-recommendation="{{ row.top_recommendation|e }}" data-source="{{ row.top_recommendation_source or '' }}"> 
+                  <i class="bi bi-clipboard-check"></i> Triage
+                </button>
+
+                {% if not is_forms_mode and not is_rejected_mode and (current_role in ['staff', 'developer'] or (current_role == 'manager' and manager_can_approve)) %}
+                  <form method="post" action="{{ url_for('approve_activity', activity_id=activity.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                  </form>
+                  <form method="post" action="{{ url_for('reject_activity', activity_id=activity.id) }}" class="d-inline"
+                        data-confirm-message="Reject form #{{ activity.id }}? The submitting technician will be notified."
+                        data-confirm-title="Reject Form" data-confirm-label="Yes, reject">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center text-muted py-4">
+        {% if is_forms_mode and review_filter == 'reviewed' and type_filter == 'rca' %}
+          No reviewed RCA forms found.
+        {% elif is_forms_mode and review_filter == 'reviewed' and type_filter == 'pm' %}
+          No reviewed PM forms found.
+        {% elif is_forms_mode %}
+          No field forms submitted yet.
+        {% elif is_rejected_mode %}
+          No rejected PM RCA forms yet.
+        {% else %}
+          No PM RCA forms are pending review.
+        {% endif %}
+      </div>
+    {% endif %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.ticket-card[data-activity-id]').forEach(function(card){
+    var aid = card.getAttribute('data-activity-id');
+    if(!aid) return;
+    var footer = card.querySelector('.small.text-muted');
+    if(footer && footer.textContent.trim()) return; // already has recommendation
+    // fetch suggestion
+    fetch(`/api/activity/${aid}/suggestion`, { headers: { 'Accept': 'application/json' } })
+      .then(r => r.ok ? r.json() : null)
+      .then(payload => {
+        if(!payload || payload.status !== 'ok' || !payload.suggestion) return;
+        if(footer){
+          var wrap = document.createElement('div');
+          wrap.className = 'mt-1';
+          var src = payload.source ? ` <small class="text-muted ms-2">(${payload.source})</small>` : '';
+          wrap.innerHTML = `<i class="bi bi-lightbulb text-warning me-1"></i>${payload.suggestion}${src}`;
+          footer.appendChild(wrap);
+        }
+      }).catch(()=>{});
+  });
+});
+</script>
+<!-- Triage modal -->
+<div class="modal fade" id="triageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Review Triage</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="triageContent">
+          <p class="small text-muted">Suggestion:</p>
+          <div id="triageSuggestion" class="fs-6 mb-2"></div>
+          <p class="small text-muted">Source:</p>
+          <div id="triageSource" class="mb-3"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+ </div>
+
+<script>
+document.addEventListener('click', function(ev){
+  var btn = ev.target.closest('.triage-btn');
+  if(!btn) return;
+  var suggestion = btn.getAttribute('data-recommendation') || '';
+  var source = btn.getAttribute('data-source') || '';
+  var sEl = document.getElementById('triageSuggestion');
+  var srcEl = document.getElementById('triageSource');
+  if(sEl) sEl.textContent = suggestion;
+  if(srcEl) srcEl.textContent = source || 'n/a';
+  var modal = new bootstrap.Modal(document.getElementById('triageModal'));
+  modal.show();
+});
+</script>
+{% endblock %}
+  </div>
+
+  {# Pagination #}
+  {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Desk activities pagination" class="mt-3">
+      <ul class="pagination flex-wrap justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('desk_activities', mode=view_mode, q=search_query, date=created_on, month=month_filter, risk=risk_filter, sla=sla_filter, page=pagination.prev_num, per_page=pagination.per_page) if pagination.has_prev else '#' }}">
+            Previous
+          </a>
+        </li>
+        {% for page_num in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+          {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('desk_activities', mode=view_mode, q=search_query, date=created_on, month=month_filter, risk=risk_filter, sla=sla_filter, page=page_num, per_page=pagination.per_page) }}">
+                {{ page_num }}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('desk_activities', mode=view_mode, q=search_query, date=created_on, month=month_filter, risk=risk_filter, sla=sla_filter, page=pagination.next_num, per_page=pagination.per_page) if pagination.has_next else '#' }}">
+            Next
+          </a>
+        </li>
+      </ul>
+      <p class="text-muted small text-center">
+        Showing {{ review_rows|length }} of {{ pagination.total }} records on page {{ pagination.page }} of {{ pagination.pages }}.
+      </p>
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

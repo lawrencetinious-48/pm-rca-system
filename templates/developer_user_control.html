@@ -1,0 +1,1077 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+{% set security_posture = security_posture if security_posture is defined else {
+    'score': 0,
+    'session_cookie_secure': false,
+    'remember_cookie_secure': false,
+    'preferred_url_scheme': 'http',
+    'same_site': 'Lax',
+    'csrf_protection': false,
+    'http_only': false,
+    'privileged_user_count': 0,
+    'blocked_users': 0,
+    'total_users': 0,
+    'privileged_user_ratio': 0,
+    'privileged_access_ok': true,
+    'blocked_users_ok': true,
+} %}
+{% set users = users if users is defined else [] %}
+{% set role_breakdown = role_breakdown if role_breakdown is defined else {} %}
+{% set photo_library_controls = photo_library_controls if photo_library_controls is defined else {
+    'include_screenshots': false,
+    'allow_import': false,
+    'max_scan_limit': 0,
+} %}
+{% set max_photo_mb = max_photo_mb if max_photo_mb is defined else 10 %}
+{% set max_upload_mb = max_upload_mb if max_upload_mb is defined else 256 %}
+{% set min_upload_mb = min_upload_mb if min_upload_mb is defined else 64 %}
+{% set sla_policy_settings = sla_policy_settings if sla_policy_settings is defined else {
+    'standard_hours': 24,
+    'critical_hours': 72,
+    'due_soon_hours': 24,
+    'escalation_enabled': true,
+} %}
+{% set recent_user_actions = recent_user_actions if recent_user_actions is defined else [] %}
+{% set role_matrix_columns = role_matrix_columns if role_matrix_columns is defined else [] %}
+{% set role_matrix_keys = role_matrix_keys if role_matrix_keys is defined else [] %}
+{% set role_matrix = role_matrix if role_matrix is defined else {} %}
+{% set role_matrix_summary = role_matrix_summary if role_matrix_summary is defined else {
+    'entry_count': 0,
+    'open_entry_count': 0,
+    'issue_count': 0,
+    'issues': [],
+    'is_secure': true,
+} %}
+{% set avatar_options = avatar_options if avatar_options is defined else [] %}
+{% set avatar_choice_map = avatar_choice_map if avatar_choice_map is defined else {} %}
+{% set avatar_icon_map = avatar_icon_map if avatar_icon_map is defined else {} %}
+{% set user_settings_map = user_settings_map if user_settings_map is defined else {} %}
+{% set theme_options = theme_options if theme_options is defined else ['light', 'dark'] %}
+{% set language_options = language_options if language_options is defined else ['en'] %}
+{% set role_options = role_options if role_options is defined else [] %}
+{% set issued_credentials = issued_credentials if issued_credentials is defined else false %}
+
+<style>
+  .security-score-ring {
+    position: relative;
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    overflow: hidden;
+  }
+  .security-score-ring::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      var(--score-color, #38bdf8) calc(var(--score, 0) * 1%),
+      rgba(148, 163, 184, 0.24) 0
+    );
+    transform: rotate(-90deg);
+  }
+  .security-score-ring::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .security-score-ring .ring-center {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+  }
+  .security-score-ring span {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1d4ed8;
+  }
+  .security-score-ring small {
+    display: block;
+    font-size: 0.75rem;
+    color: #475569;
+  }
+  .security-posture-card .posture-chip {
+    min-width: 110px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(248,250,252,0.9);
+  }
+  .security-posture-card .posture-chip strong {
+    font-size: 0.85rem;
+  }
+  .role-matrix-table .form-check-input {
+    width: 1.45rem;
+    height: 1.45rem;
+    margin-left: 0;
+    margin-right: 0.35rem;
+  }
+  .role-matrix-table td {
+    vertical-align: middle;
+  }
+  .role-matrix-table th {
+    white-space: nowrap;
+  }
+  .profile-card {
+    border: 1px solid rgba(13, 110, 253, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .profile-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+  }
+  .avatar-pick-tile {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 14px;
+    padding: 10px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .avatar-pick-tile.is-selected {
+    border-color: rgba(59, 130, 246, 0.7);
+    background: rgba(59, 130, 246, 0.08);
+  }
+  .avatar-pick-tile input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .developer-control-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(248, 250, 252, 0.95);
+    font-size: 0.82rem;
+  }
+  .developer-control-chip i {
+    font-size: 0.95rem;
+  }
+  .user-details-expanded {
+    border-color: rgba(59, 130, 246, 0.45) !important;
+    background: rgba(59, 130, 246, 0.04) !important;
+  }
+</style>
+
+<div class="d-flex align-items-center gap-2 mb-1">
+  <i class="bi bi-terminal-fill fs-4 text-primary"></i>
+  <h1 class="mb-0">Admin User Control</h1>
+</div>
+<p class="text-muted mb-4">Full system governance — user access, upload limits, scanner policy, role matrix, security posture, and audit trail.</p>
+
+{# System Status Bar #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 border-0 bg-success-subtle">
+      <div class="fs-2 fw-bold text-success">{{ users|length }}</div>
+      <div class="small text-muted">Total Users</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 border-0 bg-danger-subtle">
+      <div class="fs-2 fw-bold text-danger">{{ users|selectattr('is_blocked')|list|length }}</div>
+      <div class="small text-muted">Blocked Accounts</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 border-0 bg-info-subtle">
+      <div class="fs-2 fw-bold text-info">{{ max_upload_mb }}MB</div>
+      <div class="small text-muted">Upload Cap</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3 border-0 bg-warning-subtle">
+      <div class="fs-2 fw-bold text-warning">{{ photo_library_controls.max_scan_limit }}</div>
+      <div class="small text-muted">Scan Limit</div>
+    </div>
+  </div>
+</div>
+
+{% if security_posture.privileged_user_ratio > 25 or security_posture.blocked_users > 0 %}
+<div class="card border-danger-subtle bg-danger-subtle mb-4 p-3">
+  <div class="d-flex align-items-center gap-3">
+    <i class="bi bi-exclamation-triangle-fill fs-3 text-danger"></i>
+    <div>
+      <div class="fw-semibold text-danger">High-risk security posture detected</div>
+      <div class="small text-danger mb-0">
+        {% if security_posture.privileged_user_ratio > 25 %}
+          Privileged user ratio is {{ security_posture.privileged_user_ratio }}%, which exceeds the recommended 25% threshold.
+        {% endif %}
+        {% if security_posture.privileged_user_ratio > 25 and security_posture.blocked_users > 0 %}
+          <br>
+        {% endif %}
+        {% if security_posture.blocked_users > 0 %}
+          There are {{ security_posture.blocked_users }} blocked account{{ 's' if security_posture.blocked_users != 1 else '' }}, review lockout behavior and account security.
+        {% endif %}
+      </div>
+    </div>
+    <span class="badge rounded-pill bg-danger ms-auto">Action needed</span>
+  </div>
+</div>
+{% endif %}
+
+{# Security Posture Card #}
+<div class="card mb-4 p-4 security-posture-card border-secondary-subtle" id="security-posture">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-shield-lock-fill text-primary fs-4"></i>
+    <div>
+      <h5 class="mb-0">Security Posture</h5>
+      <p class="text-muted small mb-0">A live view of key runtime security flags and guidance for stricter deployment.</p>
+    </div>
+    <span class="badge text-bg-info ms-auto">Config status</span>
+  </div>
+  <div class="row g-3 align-items-center mb-3">
+    <div class="col-auto">
+      <div class="security-score-ring" id="securityScoreRing" style="--score: {{ security_posture.score }}; --score-color: {{ 'var(--bs-success)' if security_posture.score >= 80 else ('var(--bs-warning)' if security_posture.score >= 60 else 'var(--bs-danger)') }};">
+        <div class="ring-center">
+          <span id="securityScoreValue">{{ security_posture.score }}%</span>
+          <small>Security health</small>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="d-flex flex-wrap gap-2">
+        <div class="posture-chip">
+          <strong>Session secure</strong>
+          <span id="postureSessionCookieSecure" class="badge text-bg-{{ 'success' if security_posture.session_cookie_secure else 'danger' }}">{{ 'ON' if security_posture.session_cookie_secure else 'OFF' }}</span>
+        </div>
+        <div class="posture-chip">
+          <strong>Remember secure</strong>
+          <span id="postureRememberCookieSecure" class="badge text-bg-{{ 'success' if security_posture.remember_cookie_secure else 'danger' }}">{{ 'ON' if security_posture.remember_cookie_secure else 'OFF' }}</span>
+        </div>
+        <div class="posture-chip">
+          <strong>URL scheme</strong>
+          <span id="postureUrlScheme" class="badge text-bg-{{ 'success' if security_posture.preferred_url_scheme == 'https' else 'warning' }}">{{ security_posture.preferred_url_scheme|upper }}</span>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <div class="posture-chip">
+          <strong>SameSite</strong>
+          <span id="postureSameSite" class="badge text-bg-{{ 'success' if security_posture.same_site|lower in ['lax','strict'] else 'warning' }}">{{ security_posture.same_site }}</span>
+        </div>
+        <div class="posture-chip">
+          <strong>CSRF</strong>
+          <span id="postureCsrf" class="badge text-bg-{{ 'success' if security_posture.csrf_protection else 'danger' }}">{{ 'ON' if security_posture.csrf_protection else 'OFF' }}</span>
+        </div>
+        <div class="posture-chip">
+          <strong>HttpOnly</strong>
+          <span id="postureSessionHttpOnly" class="badge text-bg-{{ 'success' if security_posture.http_only else 'danger' }}">{{ 'ON' if security_posture.http_only else 'OFF' }}</span>
+        </div>
+        <div class="posture-chip">
+          <strong>Privileged ratio</strong>
+          <span id="posturePrivilegedRatio" class="badge text-bg-{{ 'success' if security_posture.privileged_user_ratio <= 25 else 'danger' }}">{{ security_posture.privileged_user_ratio }}%</span>
+        </div>
+        <div class="posture-chip">
+          <strong>Blocked users</strong>
+          <span id="postureBlockedUsers" class="badge text-bg-{{ 'success' if security_posture.blocked_users == 0 else 'danger' }}">{{ security_posture.blocked_users }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3" id="securityPostureDetailPanel">
+    <div class="col-12 col-lg-6">
+      <div class="p-3 rounded-3 bg-white border shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div>
+            <strong>Posture checklist</strong>
+            <p class="small text-muted mb-0">Interactive runtime checks with clear remediation guidance.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="togglePostureDetailsBtn">Show details</button>
+        </div>
+        <div id="postureChecklist" class="list-group list-group-flush"></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="p-3 rounded-3 bg-white border shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div>
+            <strong>Recommended fixes</strong>
+            <p class="small text-muted mb-0">Copy production config or inspect raw values before deployment.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="copySecurityConfigBtn">Copy config</button>
+        </div>
+        <div id="securityFixes" class="mb-2"></div>
+        <pre id="securityConfigJson" class="small bg-light p-2 rounded d-none" style="max-height: 200px; overflow:auto;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="p-3 rounded-3 border bg-white shadow-sm">
+        <div class="text-uppercase text-primary small mb-2">Role distribution</div>
+        {% for role, count in role_breakdown.items() %}
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">{{ role|replace('_', ' ')|title }}</span>
+            <strong>{{ count }}</strong>
+          </div>
+        {% endfor %}
+        {% if not role_breakdown %}
+          <p class="text-muted small mb-0">No users yet.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-12 col-md-8">
+      <div class="p-3 rounded-3 border bg-white shadow-sm">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div>
+            <div class="text-uppercase text-primary small">Security guidance</div>
+            <p class="mb-0 text-muted small">Use this panel to identify low-risk config and enforce safer login / cookie policies before production.</p>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span id="securityPostureLastChecked" class="text-muted small">Last checked: just now</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshSecurityPostureBtn">
+              <i class="bi bi-arrow-repeat"></i> Refresh view
+            </button>
+          </div>
+        </div>
+        <div class="row gx-3 gy-2">
+          <div class="col-12 col-md-6">
+            <div class="p-3 rounded-3 bg-light">
+              <strong>Recommended</strong>
+              <p class="small text-muted mb-0">Switch to HTTPS and enforce secure cookies for production deployments.</p>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="p-3 rounded-3 bg-light">
+              <strong>Watch</strong>
+              <p class="small text-muted mb-0">Ensure login entry points are restricted by the role access matrix for developers/admins.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if issued_credentials %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <strong>Latest Issued Credentials</strong><br>
+  Email: {{ issued_credentials.email }}<br>
+  {% if issued_credentials.previous_password %}
+  Previous Password (Provided): {{ issued_credentials.previous_password }}<br>
+  {% endif %}
+  Password: {{ issued_credentials.password }}
+  <div class="small text-muted">Auto-generated by system; copy now. This is shown once.</div>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 p-3">
+      <h5 class="mb-1"><i class="bi bi-sliders me-2"></i>System Upload Limits</h5>
+      <p class="text-muted small mb-3">Cap per-image and per-request file sizes. Changes apply immediately to all users.</p>
+      <form method="post" action="{{ url_for('admin_user_control') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="action" value="update_upload_limits">
+
+        <div class="mb-3">
+          <label class="form-label" for="max_photo_mb">MAX_PHOTO_MB (per image)</label>
+          <input type="number" min="1" max="50" step="1" id="max_photo_mb" name="max_photo_mb"
+                 class="form-control" value="{{ max_photo_mb }}" required>
+          <small class="text-muted">Set the per-image cap from 1MB to 50MB.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="max_upload_mb">MAX_UPLOAD_MB (full request)</label>
+          <input type="number" min="{{ min_upload_mb }}" max="4096" step="1" id="max_upload_mb"
+                 name="max_upload_mb" class="form-control" value="{{ max_upload_mb }}" required>
+          <small class="text-muted">Set a fixed total cap up to 4096MB. Minimum required: {{ min_upload_mb }}MB.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Upload Limits</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 p-3">
+      <h5 class="mb-1"><i class="bi bi-shield-exclamation me-2"></i>SLA Policy & Escalation</h5>
+      <p class="text-muted small mb-3">Set the SLA window, escalation threshold, and whether automated escalation emails are enabled.</p>
+      <form method="post" action="{{ url_for('admin_user_control') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="action" value="update_sla_policy_settings">
+
+        <div class="mb-3">
+          <label class="form-label" for="standard_hours">SLA Standard Hours</label>
+          <input type="number" min="1" max="168" step="1" id="standard_hours" name="standard_hours"
+                 class="form-control" value="{{ sla_policy_settings.standard_hours }}" required>
+          <small class="text-muted">Hours before a standard activity becomes due.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="critical_hours">SLA Critical Hours</label>
+          <input type="number" min="1" max="168" step="1" id="critical_hours" name="critical_hours"
+                 class="form-control" value="{{ sla_policy_settings.critical_hours }}" required>
+          <small class="text-muted">Hours before a critical breach escalates to admin review.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="due_soon_hours">Due Soon Notification Window</label>
+          <input type="number" min="1" max="168" step="1" id="due_soon_hours" name="due_soon_hours"
+                 class="form-control" value="{{ sla_policy_settings.due_soon_hours }}" required>
+          <small class="text-muted">Notify reviewers this many hours before SLA deadline.</small>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="escalation_enabled" name="escalation_enabled" value="1"
+                 {% if sla_policy_settings.escalation_enabled %}checked{% endif %}>
+          <label class="form-check-label" for="escalation_enabled">Enable automated SLA escalation</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save SLA Settings</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 p-3">
+      <h5 class="mb-1"><i class="bi bi-images me-2"></i>Photo Scanner Controls</h5>
+      <p class="text-muted small mb-3">Set import and scan policy for the admin photo library. Limits apply per‑request.</p>
+      <form method="post" action="{{ url_for('admin_user_control') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="action" value="update_photo_library_controls">
+
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="include_screenshots" name="include_screenshots" value="1"
+                 {% if photo_library_controls.include_screenshots %}checked{% endif %}>
+          <label class="form-check-label" for="include_screenshots">Include screenshots in scan results</label>
+        </div>
+
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="allow_import" name="allow_import" value="1"
+                 {% if photo_library_controls.allow_import %}checked{% endif %}>
+          <label class="form-check-label" for="allow_import">Allow importing monitored images into uploads</label>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="max_scan_limit">Maximum scan limit per request</label>
+          <input type="number" min="12" max="200" step="1" id="max_scan_limit" name="max_scan_limit"
+                 class="form-control" value="{{ photo_library_controls.max_scan_limit }}" required>
+          <small class="text-muted">Controls how many images the Photo Library page can load at once.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Photo Scanner Controls</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 p-3">
+      <h5 class="mb-1"><i class="bi bi-clock-history me-2"></i>Audit Trail</h5>
+      <p class="text-muted small mb-3">Last 20 admin user‑control actions recorded in the activity log.</p>
+      <div style="max-height: 300px; overflow-y: auto;">
+        {% if recent_user_actions %}
+          <ul class="list-group list-group-flush">
+            {% for event in recent_user_actions %}
+              <li class="list-group-item px-0">
+                <div class="fw-semibold">{{ event.details }}</div>
+                <small class="text-muted">{{ event.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-0">No admin actions recorded yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Role Access Matrix #}
+<div class="card mb-4 p-3">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <i class="bi bi-grid-3x3-gap fs-5 text-primary"></i>
+    <h5 class="mb-0">Role Access Matrix</h5>
+    <span class="badge text-bg-secondary ms-auto">Login Gate</span>
+  </div>
+  <p class="text-muted small mb-3">Control which account roles can authenticate under each login entry point. Unchecked roles are blocked from logging in regardless of credentials.</p>
+  <div class="alert alert-{{ 'success' if role_matrix_summary.is_secure else 'danger' }} py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <div>
+        <strong>{{ 'Role matrix is aligned with recommended access rules' if role_matrix_summary.is_secure else 'Role matrix needs tightening' }}</strong>
+        <div class="small text-muted">
+          {% if role_matrix_summary.is_secure %}
+            {{ role_matrix_summary.entry_count }} login entries are scoped to expected roles.
+          {% else %}
+            {{ role_matrix_summary.issue_count }} issue{{ 's' if role_matrix_summary.issue_count != 1 else '' }} detected across {{ role_matrix_summary.entry_count }} entries.
+          {% endif %}
+        </div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="reviewRoleMatrixBtn">Review matrix</button>
+        <form method="post" action="{{ url_for('admin_user_control') }}" class="mb-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="action" value="reset_role_access_matrix">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Reset to secure defaults</button>
+        </form>
+      </div>
+    </div>
+    {% if not role_matrix_summary.is_secure %}
+      <ul class="mb-0 mt-2 small ps-3">
+        {% for issue in role_matrix_summary.issues %}
+          <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+  <form method="post" action="{{ url_for('admin_user_control') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="update_role_access_matrix">
+
+    <div class="table-responsive role-matrix-table">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Login Entry</th>
+            {% for role in role_matrix_columns %}
+            <th class="text-center">{{ role|replace('_', ' ')|title }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in role_matrix_keys %}
+          <tr>
+            <td><strong>{{ entry|replace('_', ' ')|title }}</strong></td>
+            {% for role in role_matrix_columns %}
+            <td class="text-center">
+              <div class="form-check form-switch d-inline-flex align-items-center mb-0">
+                <input class="form-check-input" type="checkbox" id="matrix_{{ entry }}_{{ role }}"
+                       name="matrix_{{ entry }}" value="{{ role }}"
+                       {% if role in role_matrix.get(entry, []) %}checked{% endif %}>
+                <label class="form-check-label visually-hidden" for="matrix_{{ entry }}_{{ role }}"></label>
+              </div>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="small text-muted mt-1">
+      <strong>Tip:</strong> unchecked roles cannot log in via that entry point. Keep developer and admin paths tightly scoped.
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Save Role Matrix</button>
+  </form>
+  <script>
+    (function () {
+      const matrixTable = document.querySelector('.role-matrix-table tbody');
+      const reviewButton = document.getElementById('reviewRoleMatrixBtn');
+      if (!matrixTable) return;
+
+      function evaluateRow(row) {
+        const entryKey = row.querySelector('th').textContent.trim().toLowerCase();
+        const checked = Array.from(row.querySelectorAll('input[type="checkbox"]')).filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value);
+        const badge = document.createElement('span');
+        badge.className = 'badge ms-2';
+        let state = 'secondary';
+        let text = 'Neutral';
+
+        if (checked.length === 0) {
+          state = 'warning';
+          text = 'No access';
+        } else if (checked.length === 1) {
+          state = 'success';
+          text = 'Scoped';
+        } else if (checked.length >= 3) {
+          state = 'danger';
+          text = 'Overly broad';
+        } else {
+          state = 'warning';
+          text = 'Broad';
+        }
+
+        if (entryKey !== 'developer' && checked.includes('developer')) {
+          state = 'danger';
+          text = 'Developer access on non-developer login';
+        }
+        if (entryKey === 'technician' && checked.some((role) => role !== 'technician')) {
+          state = 'danger';
+          text = 'Technician login too permissive';
+        }
+        if (entryKey === 'staff' && checked.includes('developer')) {
+          state = 'danger';
+          text = 'Staff login includes developer access';
+        }
+
+        badge.classList.add('bg-' + state, 'text-white');
+        const label = row.querySelector('th');
+        if (label && !label.querySelector('.matrix-risk-badge')) {
+          badge.classList.add('matrix-risk-badge');
+          label.appendChild(badge);
+        }
+      }
+
+      Array.from(matrixTable.querySelectorAll('tr')).forEach(evaluateRow);
+
+      if (reviewButton) {
+        reviewButton.addEventListener('click', function () {
+          Array.from(matrixTable.querySelectorAll('tr')).forEach((row) => {
+            const existing = row.querySelector('.matrix-risk-badge');
+            if (existing) existing.remove();
+            evaluateRow(row);
+          });
+        });
+      }
+    })();
+  </script>
+</div>
+
+{# User Accounts Section #}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-people-fill fs-5 text-primary"></i>
+  <h5 class="mb-0">User Accounts</h5>
+  <span class="badge text-bg-secondary ms-2">{{ users|length }} total</span>
+  <span class="badge text-bg-danger ms-1">{{ users|selectattr('is_blocked')|list|length }} blocked</span>
+</div>
+
+<div class="row row-cols-1 row-cols-lg-2 g-3 profile-grid-row">
+  {% for user in users %}
+    {% set gender_value = (user.gender or '')|lower %}
+    {% set avatar_key = avatar_choice_map.get(user.id, 'neutral') %}
+    {% set avatar_icon = avatar_icon_map.get(avatar_key, 'person-circle') %}
+    {% set user_settings = user_settings_map.get(user.id, {}) %}
+    {% set avatar_meta = namespace(label='Default') %}
+    {% for avatar in avatar_options %}
+      {% if avatar.key == avatar_key %}
+        {% set avatar_meta.label = avatar.label %}
+      {% endif %}
+    {% endfor %}
+    <div class="col">
+      <div class="card profile-card role-{{ (user.role or 'user')|replace('_', '-')|lower }} h-100 p-3" data-user-card="{{ user.id }}">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+          <div>
+            <h5 class="mb-1">{{ user.display_name }}</h5>
+            {% if user.uid %}
+              <span class="badge text-bg-dark mt-1" style="letter-spacing:0.05em; font-family:monospace;">{{ user.uid }}</span>
+            {% endif %}
+            <div class="small text-muted">{{ user.email }}</div>
+          </div>
+          <div class="profile-identity-stack">
+            <div class="profile-avatar-pill" data-avatar-key="{{ avatar_key }}" title="Avatar preset: {{ avatar_meta.label }}">
+              <i class="bi bi-{{ avatar_icon }} avatar-glyph"></i>
+              <span class="avatar-meta">{{ avatar_meta.label }}</span>
+            </div>
+            <div class="profile-gender-pill">
+              {% if gender_value in ['female', 'f'] %}
+                <i class="bi bi-gender-female"></i><span>Female</span>
+              {% elif gender_value in ['male', 'm'] %}
+                <i class="bi bi-gender-male"></i><span>Male</span>
+              {% elif gender_value in ['other', 'o'] %}
+                <i class="bi bi-gender-ambiguous"></i><span>Other</span>
+              {% else %}
+                <i class="bi bi-person-fill"></i><span>Not set</span>
+              {% endif %}
+            </div>
+            <div class="text-end">
+              {% if user.is_blocked %}
+                <span class="badge text-bg-danger">Blocked</span>
+              {% else %}
+                <span class="badge text-bg-success">Active</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="small text-muted mb-3">
+          Region: {{ user.region or 'Not set' }} | Role: {{ user.role|replace('_', ' ')|title }}
+          | Theme: {{ (user_settings.theme or 'light')|title }} | Language: {{ (user_settings.language or 'en')|upper }}
+          | Created: {{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+        </div>
+
+        {# Edit Profile Form #}
+        <form method="post" action="{{ url_for('edit_user_profile', user_id=user.id) }}" class="mb-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label class="form-label fw-semibold mb-2">Edit Profile</label>
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <input type="text" name="first_name" class="form-control form-control-sm" value="{{ user.first_name or '' }}" placeholder="First name" required>
+            </div>
+            <div class="col-12 col-md-6">
+              <input type="text" name="last_name" class="form-control form-control-sm" value="{{ user.last_name or '' }}" placeholder="Last name" required>
+            </div>
+            <div class="col-12 col-md-8">
+              <input type="email" name="email" class="form-control form-control-sm" value="{{ user.email }}" placeholder="Email" required>
+            </div>
+            <div class="col-12 col-md-4">
+              <input type="text" name="uid" class="form-control form-control-sm" value="{{ user.uid or '' }}" placeholder="UID" maxlength="12">
+            </div>
+            <div class="col-12 col-md-6">
+              <input type="text" name="region" class="form-control form-control-sm" value="{{ user.region or '' }}" placeholder="Region">
+            </div>
+            <div class="col-12 col-md-6">
+              <select name="gender" class="form-select form-select-sm" aria-label="Gender for {{ user.email }}">
+                <option value="" {% if not user.gender %}selected{% endif %}>Gender</option>
+                <option value="male" {% if (user.gender or '')|lower == 'male' %}selected{% endif %}>Male</option>
+                <option value="female" {% if (user.gender or '')|lower == 'female' %}selected{% endif %}>Female</option>
+                <option value="other" {% if (user.gender or '')|lower == 'other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="avatar-pick-group" role="group" aria-label="Avatar preset for {{ user.email }}">
+                {% for avatar in avatar_options %}
+                  <label class="avatar-pick-tile{% if avatar_key == avatar.key %} is-selected{% endif %}" title="{{ avatar.label }}">
+                    <input type="radio" name="avatar_key" value="{{ avatar.key }}" {% if avatar_key == avatar.key %}checked{% endif %} class="visually-hidden">
+                    <i class="bi bi-{{ avatar.icon }}"></i>
+                    <span>{{ avatar.label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="col-12">
+              <input type="text" name="support_desk" class="form-control form-control-sm" value="{{ user.support_desk or '' }}" placeholder="Support desk name">
+            </div>
+            <div class="col-12 col-md-6">
+              <input type="text" name="site_operations_phone" class="form-control form-control-sm" value="{{ user.site_operations_phone or '' }}" placeholder="Site operations phone">
+            </div>
+            <div class="col-12 col-md-6">
+              <input type="text" name="emergency_phone" class="form-control form-control-sm" value="{{ user.emergency_phone or '' }}" placeholder="Emergency phone">
+            </div>
+          </div>
+          <div class="mt-2 d-flex justify-content-end gap-2 flex-wrap">
+            <button type="submit" class="btn btn-sm btn-primary">Save Profile</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleUserDetails({{ user.id }})">Preview</button>
+          </div>
+        </form>
+
+        {% if user.id != current_user.id %}
+          {# Admin Controls Panel #}
+          <div class="developer-control-panel mb-3">
+            <div class="developer-control-panel-header">
+              <div>
+                <div class="fw-semibold">Admin Controls</div>
+                <div class="small text-muted">Override app behaviour and restore user state.</div>
+              </div>
+              <span class="developer-pref-count badge rounded-pill text-bg-light border">
+                {{ user_settings.preference_keys|length }} pref{% if (user_settings.preference_keys|length) != 1 %}s{% endif %}
+              </span>
+            </div>
+
+            <form method="post" action="{{ url_for('update_user_controls', user_id=user.id) }}" class="mb-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="developer_control_action" value="update_settings">
+              <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                  <label class="form-label mb-1">Theme</label>
+                  <select name="theme" class="form-select form-select-sm" aria-label="Theme for {{ user.email }}">
+                    {% for theme in theme_options %}
+                      <option value="{{ theme }}" {% if (user_settings.theme or 'light') == theme %}selected{% endif %}>{{ theme|title }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12 col-md-4">
+                  <label class="form-label mb-1">Language</label>
+                  <select name="language" class="form-select form-select-sm" aria-label="Language for {{ user.email }}">
+                    {% for language in language_options %}
+                      <option value="{{ language }}" {% if (user_settings.language or 'en') == language %}selected{% endif %}>{{ language|upper }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-12 col-md-4 d-grid">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">Save User Settings</button>
+                </div>
+              </div>
+            </form>
+
+            <div class="developer-control-chips mb-2">
+              <span class="developer-control-chip"><i class="bi bi-palette"></i> {{ (user_settings.theme or 'light')|title }}</span>
+              <span class="developer-control-chip"><i class="bi bi-translate"></i> {{ (user_settings.language or 'en')|upper }}</span>
+              <span class="developer-control-chip"><i class="bi bi-bell-slash"></i> {{ user_settings.hidden_message_count or 0 }} hidden messages</span>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <form method="post" action="{{ url_for('update_user_controls', user_id=user.id) }}"
+                    data-confirm-message="Reset app settings for {{ user.display_name }}? Theme will return to Light, language to EN, and stored app preferences will be cleared except avatar."
+                    data-confirm-title="Reset App Settings" data-confirm-label="Reset settings">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="developer_control_action" value="reset_app_settings">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Reset App Settings</button>
+              </form>
+
+              <form method="post" action="{{ url_for('update_user_controls', user_id=user.id) }}"
+                    data-confirm-message="Restore hidden inbox messages for {{ user.display_name }}?"
+                    data-confirm-title="Restore Inbox Messages" data-confirm-label="Restore messages">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="developer_control_action" value="clear_hidden_messages">
+                <button type="submit" class="btn btn-sm btn-outline-info">Restore Hidden Messages</button>
+              </form>
+            </div>
+          </div>
+
+          {# Role selector #}
+          <form method="post" action="{{ url_for('set_user_role', user_id=user.id) }}" class="mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="form-label mb-1">Role</label>
+            <div class="d-flex gap-2">
+              <select name="role" class="form-select form-select-sm" aria-label="Role selector for {{ user.email }}">
+                {% for role in role_options %}
+                  <option value="{{ role }}" {% if user.role == role %}selected{% endif %}>{{ role|replace('_', ' ')|title }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-outline-primary">Save Role</button>
+            </div>
+          </form>
+
+          {# Password reset #}
+          <form method="post" action="{{ url_for('reset_user_password', user_id=user.id) }}" class="mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="form-label mb-1" for="pwd_{{ user.id }}">Change Password</label>
+            <div class="d-flex gap-2">
+              <input id="pwd_{{ user.id }}" type="text" name="new_password" class="form-control form-control-sm" placeholder="Enter new password">
+              <button type="submit" class="btn btn-sm btn-warning">Save Password</button>
+              <button type="submit" class="btn btn-sm btn-outline-warning" formaction="{{ url_for('reset_user_password', user_id=user.id) }}"
+                      formmethod="post" name="generate_only" value="1">Generate Temp</button>
+            </div>
+            <div class="form-text">Leave blank and click <strong>Generate Temp</strong> to issue a one‑time password automatically.</div>
+          </form>
+
+          <div class="d-flex flex-wrap gap-2">
+            <form method="post" action="{{ url_for('toggle_user_block', user_id=user.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="btn btn-sm {% if user.is_blocked %}btn-success{% else %}btn-outline-danger{% endif %}">
+                {% if user.is_blocked %}Unblock{% else %}Block{% endif %}
+              </button>
+            </form>
+
+            <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}"
+                  data-confirm-message="Delete {{ user.display_name }} ({{ user.uid or user.id }})? This cannot be undone."
+                  data-confirm-title="Delete User" data-confirm-label="Yes, delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="btn btn-sm btn-outline-dark">Delete</button>
+            </form>
+
+            <a href="{{ url_for('admin_user_activity', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary">View Activity</a>
+          </div>
+        {% else %}
+          <div class="alert alert-light border mb-0">Current user profile can be edited here, but role changes, blocking, deleting, and password resets remain disabled on this page.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+{# Security Posture Refresh Script #}
+<script>
+  (function () {
+    const refreshBtn = document.getElementById("refreshSecurityPostureBtn");
+    const checkedLabel = document.getElementById("securityPostureLastChecked");
+    if (!refreshBtn) return;
+
+    const configJson = document.getElementById('securityConfigJson');
+    const fixList = document.getElementById('securityFixes');
+    const detailsBtn = document.getElementById('togglePostureDetailsBtn');
+    const checklist = document.getElementById('postureChecklist');
+    const scoreRing = document.getElementById('securityScoreRing');
+
+    function updateBadge(el, status, healthyCheck) {
+      if (!el) return;
+      el.textContent = status.label;
+      el.classList.remove("text-bg-success", "text-bg-danger", "text-bg-warning", "text-bg-info");
+      el.classList.add(status.type);
+    }
+
+    function scoreColor(score) {
+      if (score >= 80) return 'var(--bs-success)';
+      if (score >= 60) return 'var(--bs-warning)';
+      return 'var(--bs-danger)';
+    }
+
+    function buildChecklist(data) {
+      if (!checklist) return;
+      checklist.innerHTML = '';
+      const items = [
+        {
+          label: 'Secure session cookies',
+          status: data.session_cookie_secure,
+          detail: 'Use SESSION_COOKIE_SECURE=true in production behind HTTPS.',
+        },
+        {
+          label: 'Secure remember cookies',
+          status: data.remember_cookie_secure,
+          detail: 'Set REMEMBER_COOKIE_SECURE=true for persistent login safety.',
+        },
+        {
+          label: 'TLS enforced',
+          status: (data.preferred_url_scheme || '').toLowerCase() === 'https',
+          detail: 'Enable HTTPS for all traffic and set PREFERRED_URL_SCHEME=https.',
+        },
+        {
+          label: 'Cookie SameSite policy',
+          status: ['lax', 'strict'].includes((data.same_site || '').toLowerCase()),
+          detail: 'Set SESSION_COOKIE_SAMESITE=Lax or Strict to reduce CSRF risk.',
+        },
+        {
+          label: 'HttpOnly session cookie',
+          status: data.session_httponly ?? data.http_only,
+          detail: 'HttpOnly helps prevent JavaScript access to session cookie values.',
+        },
+        {
+          label: 'Privileged account ratio',
+          status: Number.isFinite(data.privileged_user_ratio) ? data.privileged_user_ratio <= 25 : true,
+          detail: 'Keep elevated roles under 25% of users to reduce attack surface.',
+        },
+        {
+          label: 'Blocked accounts',
+          status: Number.isFinite(data.blocked_users) ? data.blocked_users === 0 : true,
+          detail: 'Monitor blocked accounts and investigate repeated lockouts.',
+        },
+      ];
+      for (const item of items) {
+        const li = document.createElement('div');
+        li.className = 'list-group-item d-flex justify-content-between align-items-start gap-3';
+        li.innerHTML = `<div><div class="fw-semibold">${item.label}</div><div class="small text-muted">${item.detail}</div></div><span class="badge rounded-pill ${item.status ? 'text-bg-success' : 'text-bg-danger'}">${item.status ? 'Pass' : 'Fail'}</span>`;
+        checklist.appendChild(li);
+      }
+    }
+
+    function updateFixes(data, score) {
+      if (!fixList) return;
+      const needs = [];
+      if (!data.session_cookie_secure) {
+        needs.push('Enable SESSION_COOKIE_SECURE');
+      }
+      if (!data.remember_cookie_secure) {
+        needs.push('Enable REMEMBER_COOKIE_SECURE');
+      }
+      if ((data.preferred_url_scheme || '').toLowerCase() !== 'https') {
+        needs.push('Set PREFERRED_URL_SCHEME=https and deploy behind TLS');
+      }
+      if (!['lax', 'strict'].includes((data.same_site || '').toLowerCase())) {
+        needs.push('Set SESSION_COOKIE_SAMESITE=Lax or Strict');
+      }
+      if (!(data.session_httponly ?? data.http_only)) {
+        needs.push('Set SESSION_COOKIE_HTTPONLY=true');
+      }
+      if (Number.isFinite(data.privileged_user_ratio) && data.privileged_user_ratio > 25) {
+        needs.push('Review privileged role ratio; minimize admin/developer access.');
+      }
+      if (Number.isFinite(data.blocked_users) && data.blocked_users > 0) {
+        needs.push('Investigate blocked accounts and account lockout behavior.');
+      }
+      fixList.innerHTML = needs.length
+        ? `<div class="alert alert-${score >= 80 ? 'success' : score >= 60 ? 'warning' : 'danger'} py-2 mb-0">${needs.map((line) => `<div>${line}</div>`).join('')}</div>`
+        : '<div class="alert alert-success py-2 mb-0">All primary runtime checks are healthy.</div>';
+    }
+
+    function setSecurityScore(score) {
+      const scoreEl = document.getElementById('securityScoreValue');
+      if (!scoreEl || !scoreRing) return;
+      scoreEl.textContent = `${score}%`;
+      scoreRing.style.setProperty('--score', score);
+      scoreRing.style.setProperty('--score-color', scoreColor(score));
+    }
+
+    function renderSecurityConfig(data) {
+      if (!configJson) return;
+      configJson.textContent = JSON.stringify({
+        SESSION_COOKIE_SECURE: !!data.session_cookie_secure,
+        REMEMBER_COOKIE_SECURE: !!data.remember_cookie_secure,
+        PREFERRED_URL_SCHEME: (data.preferred_url_scheme || 'http').toLowerCase(),
+        SESSION_COOKIE_SAMESITE: (data.same_site || 'Lax'),
+        SESSION_COOKIE_HTTPONLY: !!(data.session_httponly ?? data.http_only),
+      }, null, 2);
+    }
+
+    function copyConfigToClipboard() {
+      if (!configJson) return;
+      navigator.clipboard.writeText(configJson.textContent || '').then(() => {
+        fixList.innerHTML = '<div class="alert alert-info py-2 mb-0">Security config copied to clipboard.</div>';
+      }).catch(() => {
+        fixList.innerHTML = '<div class="alert alert-danger py-2 mb-0">Copy failed. Please use browser copy manually.</div>';
+      });
+    }
+
+    function togglePostureDetails() {
+      if (!configJson || !checklist || !detailsBtn) return;
+      const isHidden = configJson.classList.contains('d-none');
+      detailsBtn.textContent = isHidden ? 'Hide details' : 'Show details';
+      checklist.classList.toggle('d-none');
+      configJson.classList.toggle('d-none');
+    }
+
+    if (checklist) checklist.classList.add('d-none');
+    if (configJson) configJson.classList.add('d-none');
+
+    if (detailsBtn) {
+      detailsBtn.addEventListener('click', togglePostureDetails);
+    }
+    const copyBtn = document.getElementById('copySecurityConfigBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', copyConfigToClipboard);
+    }
+
+    async function refreshSecurityPosture() {
+      const now = new Date();
+      if (checkedLabel) {
+        checkedLabel.textContent = 'Last checked: ' + now.toLocaleString();
+      }
+      const oldContent = refreshBtn.innerHTML;
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Refreshing...';
+
+      try {
+        const response = await fetch("{{ url_for('admin_security_posture') }}", {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error('request_failed');
+
+        const data = await response.json();
+        const score = Number.isFinite(data.score) ? data.score : (
+          (data.session_cookie_secure ? 20 : 0) +
+          (data.remember_cookie_secure ? 20 : 0) +
+          ((data.preferred_url_scheme || '').toLowerCase() === 'https' ? 20 : 0) +
+          (['lax', 'strict'].includes((data.same_site || '').toLowerCase()) ? 20 : 0) +
+          ((data.session_httponly ?? data.http_only) ? 20 : 0)
+        );
+
+        setSecurityScore(score);
+        renderSecurityConfig(data);
+        buildChecklist(data);
+        updateFixes(data, score);
+
+        updateBadge(document.getElementById('postureSessionCookieSecure'), { label: data.session_cookie_secure ? 'ON' : 'OFF', type: data.session_cookie_secure ? 'text-bg-success' : 'text-bg-danger' });
+        updateBadge(document.getElementById('postureRememberCookieSecure'), { label: data.remember_cookie_secure ? 'ON' : 'OFF', type: data.remember_cookie_secure ? 'text-bg-success' : 'text-bg-danger' });
+        updateBadge(document.getElementById('postureUrlScheme'), { label: (data.preferred_url_scheme || 'HTTP').toUpperCase(), type: ((data.preferred_url_scheme || '').toLowerCase() === 'https') ? 'text-bg-success' : 'text-bg-danger' });
+        updateBadge(document.getElementById('postureSameSite'), { label: (data.same_site || 'Lax').toUpperCase(), type: ['lax','strict'].includes((data.same_site || '').toLowerCase()) ? 'text-bg-success' : 'text-bg-warning' });
+        updateBadge(document.getElementById('postureCsrf'), { label: (data.csrf_on ?? data.csrf_protection) ? 'ON' : 'OFF', type: (data.csrf_on ?? data.csrf_protection) ? 'text-bg-success' : 'text-bg-danger' });
+        updateBadge(document.getElementById('postureSessionHttpOnly'), { label: ((data.session_httponly ?? data.http_only) ? 'ON' : 'OFF'), type: (data.session_httponly ?? data.http_only) ? 'text-bg-success' : 'text-bg-danger' });
+        updateBadge(document.getElementById('posturePrivilegedRatio'), { label: `${data.privileged_user_ratio}%`, type: (data.privileged_user_ratio <= 25) ? 'text-bg-success' : 'text-bg-danger' });
+        updateBadge(document.getElementById('postureBlockedUsers'), { label: `${data.blocked_users}`, type: (data.blocked_users === 0) ? 'text-bg-success' : 'text-bg-danger' });
+      } catch (err) {
+        if (checkedLabel) {
+          checkedLabel.textContent = 'Last checked: refresh failed';
+        }
+        console.error('Security posture refresh failed', err);
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = oldContent;
+      }
+    }
+
+    refreshBtn.addEventListener('click', function () {
+      refreshSecurityPosture();
+    });
+  })();
+</script>
+
+{% endblock %}

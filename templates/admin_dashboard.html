@@ -1,0 +1,329 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+{% from '_feature_cards.html' import feature_card %}
+<div class="role-dashboard-shell role-admin">
+  <section class="dashboard-hero-lite">
+    <p class="text-muted small mb-2">Admin workspace</p>
+    <h1 class="h3 mb-2">Welcome, {{ current_user.display_name or current_user.email }}</h1>
+    <p class="text-muted mb-0">Hello {{ current_user.display_name or current_user.email }}, welcome to your workspace.</p>
+  </section>
+
+  {# Stats cards – reuse developer layout #}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mt-1">
+    <div class="col">
+      <a href="{{ url_for('admin_staff') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-people-fill"></i></div>
+            <h1 class="display-5 fw-bold">{{ dashboard_counts.users_total }}</h1>
+            <p class="text-muted mb-0">Account Profiles</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('admin_user_control') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-person-lock"></i></div>
+            <h1 class="display-5 fw-bold">{{ dashboard_counts.blocked_users }}</h1>
+            <p class="text-muted mb-0">Account management</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('add_technician') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-plus-circle"></i></div>
+            <h1 class="display-5 fw-bold">{{ dashboard_counts.technician_users }}</h1>
+            <p class="text-muted mb-0">Add Technician</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('add_staff') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-plus-square"></i></div>
+            <h1 class="display-5 fw-bold">{{ dashboard_counts.staff_users }}</h1>
+            <p class="text-muted mb-0">Add Staff</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('add_manager') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-person-workspace"></i></div>
+            <h1 class="display-5 fw-bold">{{ dashboard_counts.manager_users }}</h1>
+            <p class="text-muted mb-0">Add Manager</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('add_general_manager') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-person-badge-fill"></i></div>
+            <h1 class="display-5 fw-bold">{{ dashboard_counts.general_manager_users }}</h1>
+            <p class="text-muted mb-0">Add General Manager</p>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="{{ url_for('settings_page') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-gear-fill"></i></div>
+            <h1 class="display-5 fw-bold">{{ public_holidays|length }}</h1>
+            <p class="text-muted mb-0">System Settings</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('notifications') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-bell-fill"></i></div>
+            <h1 class="display-5 fw-bold">{{ notification_count }}</h1>
+            <p class="text-muted mb-0">Unread System Notifications</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('admin_photo_library') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-images"></i></div>
+            <h1 class="display-5 fw-bold">{{ photo_library_count }}</h1>
+            <p class="text-muted mb-0">Photo Library</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <div class="card stats-card h-100">
+        <div class="card-body">
+          <div class="stats-icon mx-auto mb-2"><i class="bi bi-share-fill"></i></div>
+          <p class="mb-1 fw-semibold text-center">Shareable Technician Login Link + QR</p>
+          <p class="text-muted small mb-3 text-center">
+            Copy or share the technician login page and generate a scannable QR code for field staff.
+          </p>
+          <input type="url" class="form-control form-control-sm mb-2" id="loginShareUrl"
+                 value="{{ technician_login_url }}" data-share-link-public="{{ 1 if share_link_is_public else 0 }}"
+                 placeholder="https://your-hosted-domain.com/technician/login" spellcheck="false">
+          <div class="d-flex gap-2 justify-content-center flex-wrap mt-1 mb-3">
+            <button type="button" class="btn btn-primary btn-sm" id="copyShareUrlBtn">
+              <i class="bi bi-clipboard-check"></i> Copy Link
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="nativeShareBtn">
+              <i class="bi bi-send"></i> Share
+            </button>
+            <a href="{{ url_for('system_share_url') }}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-share"></i> Share Page
+            </a>
+            <a href="{{ technician_login_url }}" id="openShareLinkBtn" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-box-arrow-up-right"></i> Open Link
+            </a>
+          </div>
+
+          <div class="d-flex gap-2 align-items-center justify-content-between mb-2">
+            <button type="button" class="btn btn-success btn-sm" id="getLiveUrlBtn">
+              <i class="bi bi-arrow-repeat"></i> Get Live URL
+            </button>
+            <span class="text-muted small" id="urlLastUpdated"></span>
+          </div>
+
+          <div class="border rounded-3 p-2 mt-2 text-center bg-light" id="shareQrCard">
+            <img id="shareQrImage" alt="Login QR code" width="180" height="180"
+                 class="img-fluid mx-auto d-block" style="border-radius:10px; border:1px solid rgba(15,60,115,0.15); background:#fff; object-fit:contain;">
+            <div class="small text-muted mt-2" id="qrStatusText">QR code ready</div>
+            <div class="d-flex gap-2 justify-content-center flex-wrap mt-2">
+              <button type="button" class="btn btn-outline-dark btn-sm" id="downloadQrBtn">
+                <i class="bi bi-download"></i> Download QR
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshQrBtn">
+                <i class="bi bi-arrow-repeat"></i> Refresh QR
+              </button>
+            </div>
+          </div>
+
+          {% if not share_link_is_public %}
+            <div class="alert alert-warning mt-3 mb-0 py-2 small" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              This is a local/private link and may not work when shared externally. Set <code>PUBLIC_BASE_URL</code> to your real hosted domain.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-center text-muted small mt-4 mb-0">Admin Control Panel — use cards to navigate workflows and services.</p>
+</div>
+
+<script>
+  (function () {
+    const input = document.getElementById('loginShareUrl');
+    const qrImage = document.getElementById('shareQrImage');
+    const statusText = document.getElementById('qrStatusText');
+    const copyBtn = document.getElementById('copyShareUrlBtn');
+    const shareBtn = document.getElementById('nativeShareBtn');
+    const downloadBtn = document.getElementById('downloadQrBtn');
+    const refreshBtn = document.getElementById('refreshQrBtn');
+    const qrEndpoint = "{{ url_for('admin_share_qr') }}";
+    const getLiveUrlBtn = document.getElementById('getLiveUrlBtn');
+    const urlLastUpdated = document.getElementById('urlLastUpdated');
+    let qrFormat = 'svg';
+    const initialShareLinkPublic = input.getAttribute('data-share-link-public') === '1';
+
+    if (!input || !qrImage) return;
+
+    if (shareBtn && !navigator.share) shareBtn.style.display = 'none';
+
+    function notify(title, message) {
+      if (typeof window.appNotify === 'function') {
+        window.appNotify({ title: title, message: message });
+      }
+    }
+
+    function sanitizeUrl(raw) {
+      let value = (raw || '').trim();
+      if (!value) return '';
+      if (!/^https?:\/\//i.test(value)) value = 'https://' + value;
+      return value.replace(/\/+$/, '');
+    }
+
+    function renderQr() {
+      const url = sanitizeUrl(input.value);
+      input.value = url;
+      if (!url) {
+        statusText.textContent = 'Enter a valid URL to generate QR';
+        qrImage.removeAttribute('src');
+        return Promise.resolve(false);
+      }
+      return new Promise((resolve) => {
+        statusText.textContent = 'Generating QR...';
+        const src = `${qrEndpoint}?format=${encodeURIComponent(qrFormat)}&label=1&url=${encodeURIComponent(url)}&ts=${Date.now()}`;
+        qrImage.onload = () => { statusText.textContent = 'QR code ready'; resolve(true); };
+        qrImage.onerror = () => { statusText.textContent = 'QR generation failed'; resolve(false); };
+        qrImage.src = src;
+      });
+    }
+
+    function copyWithFallback(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise((resolve, reject) => {
+        try {
+          input.focus();
+          input.select();
+          input.setSelectionRange(0, input.value.length);
+          const ok = document.execCommand('copy');
+          ok ? resolve() : reject(new Error('copy command failed'));
+        } catch (err) { reject(err); }
+      });
+    }
+
+    copyBtn.addEventListener('click', () => {
+      const url = sanitizeUrl(input.value);
+      if (!url) { notify('Share Link', 'Enter a valid URL before copying.'); return; }
+      input.value = url;
+      copyWithFallback(url).then(() => notify('Link Copied', 'Share link copied to clipboard.'))
+        .catch(() => notify('Copy Failed', 'Could not copy link. Please copy it manually.'));
+    });
+
+    shareBtn.addEventListener('click', () => {
+      const url = sanitizeUrl(input.value);
+      if (!url) { notify('Share Link', 'Enter a valid URL before sharing.'); return; }
+      input.value = url;
+      const shareBody = 'Use this link to access the PM/RCA login page:\n' + url;
+      if (navigator.share) {
+        navigator.share({ title: 'PM/RCA Login Link', text: shareBody, url: url }).catch(() => {});
+        return;
+      }
+      copyWithFallback(url).then(() => notify('Link Copied', 'Share link copied to clipboard.'))
+        .catch(() => notify('Copy Failed', 'Could not copy link. Please copy it manually.'));
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const url = sanitizeUrl(input.value);
+      if (!url) { notify('Download QR', 'Enter a valid URL before downloading QR code.'); return; }
+      renderQr().then((ready) => {
+        if (!ready || !qrImage.src) {
+          notify('Download QR', 'QR code is not ready yet. Click Refresh QR and try again.');
+          return;
+        }
+        const anchor = document.createElement('a');
+        anchor.href = qrImage.src;
+        anchor.download = qrFormat === 'svg' ? 'pm_rca_login_qr.svg' : 'pm_rca_login_qr.png';
+        anchor.click();
+      });
+    });
+
+    refreshBtn.addEventListener('click', () => renderQr());
+    input.addEventListener('change', renderQr);
+    input.addEventListener('blur', renderQr);
+
+    function applyLiveUrl(data, forceRender) {
+      if (!data || !data.login_url) return;
+      const fresh = sanitizeUrl(data.login_url);
+      const now = new Date().toLocaleTimeString();
+      if (!fresh) return;
+      const changed = fresh !== sanitizeUrl(input.value);
+      input.value = fresh;
+      if (document.getElementById('openShareLinkBtn')) {
+        document.getElementById('openShareLinkBtn').href = fresh;
+      }
+      if (urlLastUpdated) urlLastUpdated.textContent = `Updated ${now}${data.source ? ' from ' + data.source : ''}`;
+      if (changed || forceRender) {
+        if (data.is_public) {
+          statusText.textContent = changed ? 'URL updated, regenerating QR...' : 'Generating QR...';
+          renderQr();
+        } else {
+          statusText.textContent = 'Link updated, but it is still local/private.';
+          qrImage.removeAttribute('src');
+        }
+      }
+    }
+
+    function pollLiveUrl(forceRender) {
+      return fetch('/api/live-share-url', { credentials: 'same-origin' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => applyLiveUrl(data, !!forceRender))
+        .catch(() => {});
+    }
+
+    if (getLiveUrlBtn) {
+      getLiveUrlBtn.addEventListener('click', () => {
+        getLiveUrlBtn.disabled = true;
+        getLiveUrlBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Fetching...';
+        pollLiveUrl(true).finally(() => {
+          getLiveUrlBtn.disabled = false;
+          getLiveUrlBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Get Live URL';
+        });
+      });
+    }
+
+    if (!initialShareLinkPublic) {
+      statusText.textContent = 'Set PUBLIC_BASE_URL or fetch a live public URL before generating QR.';
+    } else {
+      renderQr();
+    }
+    pollLiveUrl(true);
+    setInterval(() => pollLiveUrl(false), 30000);
+  })();
+</script>
+
+{% endblock %}

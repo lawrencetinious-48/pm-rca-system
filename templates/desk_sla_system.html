@@ -1,0 +1,269 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="review-board">
+  <div class="review-headline-card">
+    <h1><i class="bi bi-speedometer2 me-2"></i>SLA System</h1>
+    <p class="text-muted mb-0">
+      {% if desk_role == 'general_manager' %}
+        Reviewed RCA SLA awareness board.
+      {% else %}
+        Live SLA tracking for pending PM/RCA desk workload.
+      {% endif %}
+    </p>
+  </div>
+
+  {# Quick navigation cards #}
+  <div class="card p-3 review-mode-card mt-3">
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-outline-secondary" href="{{ url_for('dashboard') }}">
+        <i class="bi bi-house-door me-1"></i> Dashboard
+      </a>
+      <a class="btn btn-outline-danger" href="{{ url_for('desk_activities', mode='rcas', sla='overdue') }}">
+        <i class="bi bi-alarm me-1"></i> Overdue Queue
+      </a>
+      <a class="btn btn-outline-warning" href="{{ url_for('desk_activities', mode='rcas', sla='due_soon') }}">
+        <i class="bi bi-clock-history me-1"></i> Due Soon Queue
+      </a>
+      <a class="btn btn-outline-success" href="{{ url_for('desk_activities', mode='rcas', sla='on_track') }}">
+        <i class="bi bi-check2-circle me-1"></i> On Track Queue
+      </a>
+      <a class="btn btn-outline-dark" href="{{ url_for('settings_page') }}">
+        <i class="bi bi-sliders2 me-1"></i> SLA Settings
+      </a>
+    </div>
+  </div>
+
+  {# High‑level metrics (5 columns) #}
+  <div class="row row-cols-2 row-cols-md-5 g-3 mt-1">
+    <div class="col"><div class="card stats-card h-100"><div class="card-body text-center"><h2 class="display-6">{{ total_items }}</h2><p class="text-muted mb-0">Total Items</p></div></div></div>
+    <div class="col"><div class="card stats-card h-100"><div class="card-body text-center"><h2 class="display-6 text-danger">{{ overdue_count }}</h2><p class="text-muted mb-0">Overdue</p></div></div></div>
+    <div class="col"><div class="card stats-card h-100"><div class="card-body text-center"><h2 class="display-6 text-warning">{{ due_soon_count }}</h2><p class="text-muted mb-0">Due Soon</p></div></div></div>
+    <div class="col"><div class="card stats-card h-100"><div class="card-body text-center"><h2 class="display-6 text-success">{{ on_track_count }}</h2><p class="text-muted mb-0">On Track</p></div></div></div>
+    <div class="col"><div class="card stats-card h-100"><div class="card-body text-center"><h2 class="display-6">{{ no_deadline_count }}</h2><p class="text-muted mb-0">No Deadline</p></div></div></div>
+  </div>
+
+  {# SLA Recovery & Repeat Offender #}
+  <div class="row row-cols-1 row-cols-md-2 g-3 mt-1">
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-graph-up me-2"></i>SLA Recovery Rate</h5>
+          <h2 class="display-4 fw-bold">{{ sla_recovery_rate }}%</h2>
+          <p class="text-muted mb-0">Recovered within 24h: {{ recovered_within_24h }} / {{ overdue_resolved_total }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-bar-chart-steps me-2"></i>Repeat Offender Index</h5>
+          <h2 class="display-4 fw-bold">{{ repeat_offender_index }}%</h2>
+          <p class="text-muted mb-0">Sites with repeated SLA breaches in last 30 days.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# System Pressure Points (top breach sites) #}
+  <div class="card p-3 mt-3">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+      <span class="fw-semibold">System Pressure Points</span>
+      <span class="badge bg-secondary ms-2">Top breach sites</span>
+    </div>
+    {% if top_pressure_sites %}
+      <div class="d-flex flex-wrap gap-2">
+        {% for site_id, count in top_pressure_sites %}
+          <span class="badge bg-danger rounded-pill px-3 py-2">{{ site_id }} · {{ count }} breach{{ 'es' if count != 1 }}</span>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-muted">No repeated site pressure points in the last 30 days.</div>
+    {% endif %}
+  </div>
+
+  {# Breach Intelligence & Snag Trends #}
+  <div class="row row-cols-1 row-cols-md-2 g-3 mt-1">
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-pie-chart-fill me-2"></i>Breach Intelligence (Top Categories)</h5>
+          {% if top_breach_categories %}
+            <div class="table-responsive mt-2">
+              <table class="table table-sm">
+                <thead>
+                  <tr><th>Category</th><th class="text-end">Count</th></tr>
+                </thead>
+                <tbody>
+                  {% for category, count in top_breach_categories %}
+                    <tr><td>{{ category }}</td><td class="text-end fw-semibold">{{ count }}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted">No breach categories captured yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-bug-fill me-2"></i>Snag Trends (Top Sites)</h5>
+          {% if top_snag_sites %}
+            <div class="table-responsive mt-2">
+              <table class="table table-sm">
+                <thead>
+                  <tr><th>Site</th><th class="text-end">Snags (30d)</th></tr>
+                </thead>
+                <tbody>
+                  {% for site, count in top_snag_sites %}
+                    <tr><td>{{ site }}</td><td class="text-end fw-semibold">{{ count }}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted">No snag trend data yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Technician snag trends #}
+  <div class="card mt-3">
+    <div class="card-body">
+      <h5 class="card-title"><i class="bi bi-person-badge me-2"></i>Snag Trends (Top Technicians · Last 30 Days)</h5>
+      {% if top_snag_technicians %}
+        <div class="table-responsive mt-2">
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Technician</th><th class="text-end">Snags (30d)</th></tr>
+            </thead>
+            <tbody>
+              {% for tech, count in top_snag_technicians %}
+                <tr><td>{{ tech }}</td><td class="text-end fw-semibold">{{ count }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No technician snag trend data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Active SLA policy summary #}
+  <div class="card p-3 mt-3 sla-policy-summary-card bg-light">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+      <div>
+        <div class="small text-muted mb-1">Active Desk SLA Policy</div>
+        <div class="fw-semibold mb-1">
+          {% if active_sla_policy.enabled %}
+            {{ active_sla_policy.standard_hours }}h standard PM,
+            {{ active_sla_policy.critical_hours }}h critical/RCA,
+            due soon at {{ active_sla_policy.due_soon_hours }}h.
+          {% else %}
+            SLA is inactive for new PM/RCA submissions.
+          {% endif %}
+        </div>
+        <div class="small text-muted">Updated by {{ active_sla_policy.updated_by }} · Snapshot {{ now_value.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+      </div>
+    </div>
+  </div>
+
+  {# Spotlight items list #}
+  <div class="card p-3 mt-3">
+    <h5 class="mb-3"><i class="bi bi-star-fill text-warning me-2"></i>Spotlight Items</h5>
+    {% if review_rows %}
+      <div class="review-items-list">
+        {% for row in review_rows %}
+          {% set activity = row.activity %}
+          <div class="ticket-card shadow-sm border rounded-4 p-3 mb-3" data-href="{{ url_for('view_activity', activity_id=activity.id) }}">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+              <!-- LEFT -->
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                  <span class="badge bg-secondary">{{ activity.activity_type|upper }}</span>
+                  {% if row.sla_state == 'Overdue' %}
+                    <span class="badge bg-danger">SLA: Overdue</span>
+                  {% elif row.sla_state == 'Due Soon' %}
+                    <span class="badge bg-warning text-dark">SLA: Due Soon</span>
+                  {% elif row.sla_state == 'On Track' %}
+                    <span class="badge bg-success">SLA: On Track</span>
+                  {% elif row.sla_state == 'Resolved' %}
+                    <span class="badge bg-secondary">SLA: Resolved</span>
+                  {% else %}
+                    <span class="badge bg-light text-dark">SLA: Not Set</span>
+                  {% endif %}
+                </div>
+
+                <h5 class="mb-1 fw-bold">
+                  {{ activity.details[:60] }}{% if activity.details|length > 60 %}…{% endif %}
+                </h5>
+
+                <div class="text-muted small mb-2">
+                  Submitted by {{ activity.created_by or 'Unknown' }}
+                </div>
+
+                <p class="mb-2 text-secondary small">
+                  Response: {{ format_duration_seconds(row.stage_durations.response_seconds) }} •
+                  Resolution: {{ format_duration_seconds(row.stage_durations.resolution_seconds) }} •
+                  Total: {{ format_duration_seconds(row.stage_durations.total_seconds) }}
+                </p>
+              </div>
+
+              <!-- RIGHT -->
+              <div class="text-md-end small">
+                <div class="mb-2">
+                  <div class="fw-semibold text-muted">Created</div>
+                  <div>{{ activity.created_at.strftime('%Y-%m-%d %H:%M') if activity.created_at else '' }}</div>
+                </div>
+
+                {% if row.sla_deadline %}
+                <div>
+                  <div class="fw-semibold text-muted">SLA Due</div>
+                  <div class="{% if row.sla_state == 'Overdue' %}text-danger{% else %}text-body{% endif %} fw-bold">
+                    {{ row.sla_deadline.strftime('%Y-%m-%d %H:%M') }}
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <hr>
+
+            <!-- FOOTER -->
+            <div class="d-flex justify-content-end">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('view_activity', activity_id=activity.id) }}" title="View form">
+                <i class="bi bi-eye-fill"></i> View
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center text-muted py-4">No records in this SLA view right now.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.ticket-card[data-href]').forEach(function(card) {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', function(e) {
+        if (e.target.closest('a') || e.target.closest('button')) return;
+        const href = card.getAttribute('data-href');
+        if (href) window.location = href;
+      });
+    });
+  });
+</script>
+{% endblock %}

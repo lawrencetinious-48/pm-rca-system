@@ -1,0 +1,107 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="review-board">
+  <div class="review-headline-card">
+    <h1><i class="bi bi-table me-2"></i>PM/RCA Tracker</h1>
+    <p class="text-muted mb-0">
+      Track technician-submitted PM/RCA form details – site ID, site name, technician, timestamps, and all non‑image form fields.
+    </p>
+  </div>
+
+  <div class="card p-3 review-mode-card mt-3">
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-outline-secondary" href="{{ url_for('desk_activities', mode='rcas') }}">
+        <i class="bi bi-arrow-left me-1"></i> Back to PM RCAs
+      </a>
+      <a class="btn btn-outline-primary" href="{{ url_for('export_rca_tracker_excel', mode='open') }}" target="_blank" rel="noopener" data-no-loader>
+        <i class="bi bi-box-arrow-up-right me-1"></i> Open PM/RCA Excel
+      </a>
+      <a class="btn btn-success" href="{{ url_for('export_rca_tracker_excel', mode='download') }}" download data-no-loader>
+        <i class="bi bi-file-earmark-excel me-1"></i> Download PM/RCA Excel
+      </a>
+    </div>
+  </div>
+
+  <div class="card p-3 review-table-card mt-3">
+    {% if rows %}
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle small mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Form ID</th>
+              <th>Type</th>
+              <th>Site Number</th>
+              <th>Site Name</th>
+              <th>Technician</th>
+              <th>Created At (UTC)</th>
+              <th>Status</th>
+              <th>Approved By</th>
+              <th>Approved At (UTC)</th>
+              {% for label in labels %}
+                <th>{{ label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.form_id }}</td>
+                <td><span class="badge bg-secondary">{{ row.activity_type }}</span></td>
+                <td>{{ row.site_number }}</td>
+                <td>{{ row.site_name }}</td>
+                <td>{{ row.technician }}</td>
+                <td>{{ row.created_at }}</td>
+                <td>
+                  {% if row.status == 'Approved' %}
+                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Approved</span>
+                  {% elif row.status == 'Rejected' %}
+                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rejected</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
+                  {% endif %}
+                </td>
+                <td>{{ row.approved_by or '—' }}</td>
+                <td>{{ row.approved_at or '—' }}</td>
+                {% for label in labels %}
+                  <td>{{ row.field_values.get(label, '—') }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if pagination and pagination.total_pages > 1 %}
+        <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Tracker pagination">
+          <div>
+            <small class="text-muted">Showing {{ rows|length }} of {{ pagination.total }} results</small>
+          </div>
+          <div class="btn-group" role="group">
+            {% if pagination.has_prev %}
+              <a class="btn btn-outline-secondary" href="{{ url_for('desk_rca_tracker', page=pagination.prev_page, per_page=pagination.per_page) }}" aria-label="Previous page">
+                <i class="bi bi-arrow-left"></i>
+              </a>
+            {% else %}
+              <button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-left"></i></button>
+            {% endif %}
+            <span class="btn btn-light">Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+            {% if pagination.has_next %}
+              <a class="btn btn-outline-secondary" href="{{ url_for('desk_rca_tracker', page=pagination.next_page, per_page=pagination.per_page) }}" aria-label="Next page">
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            {% else %}
+              <button class="btn btn-outline-secondary" disabled><i class="bi bi-arrow-right"></i></button>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-inbox fs-1"></i>
+        <p class="mt-2 mb-0">No RCA forms found yet.</p>
+        <small>Submitted PM/RCA forms will appear here once technicians start submitting.</small>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

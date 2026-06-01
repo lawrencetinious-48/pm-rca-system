@@ -1,0 +1,213 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Flask instance and local data
+instance/
+*.sqlite
+*.db
+.env
+.env.prod
+
+# Local environment overrides
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Test caches and artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+pytest_tmp_run/
+_pytest_*/
+_pytest_one_base/
+_pytest_run/
+
+# User uploads and generated content
+uploads/
+photo/
+static/uploads/
+static/photo/
+
+# Test databases
+pm-test-db-*/
+test_pm_*.sqlite*
+
+# Debug outputs and probes
+out_*.txt
+out_*.json
+err_*.txt
+stage_*.txt
+sqlite_refs.txt
+probe_*.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Ad-hoc probe / diagnostic outputs (all patterns from repo)
+out_*.txt
+err*.txt
+pytest_*.txt
+stage_*.txt
+test_*_out.txt
+test_full_out*.txt
+test_output.txt
+pytest_out*.txt
+pytest_latest.txt
+pytest_fail_*.txt
+pytest_profile_edit_output.txt
+all_output.txt
+test_reset_out.txt
+test_settings_output.txt
+test_auth_focus_out.txt
+stage_*_status.txt
+stage_dev_*.txt
+stage_prod_*.txt
+stage_staging_*.txt
+stage_test_*.txt
+manager_sla_card_test*.txt
+sla_fix_test_*.txt
+out_cloudflared_*.txt
+out_ngrok_*.txt
+out_docker.txt
+out_port5000.txt
+out_dev5001.txt
+out_waitress5001.txt
+out_dev*.txt
+out_waitress*.txt
+out_pm_qc*.txt
+out_route_check.txt
+out_listener.txt
+out_*.html
+out_*_exit.txt
+out_share_ip.txt
+out_pg_dirs.txt
+out_postfix_check.txt
+out_sc_queryex.txt
+out_app_restart*.txt
+out_tunnel_restart.txt
+out_tunnel_state.txt
+out_service.json
+err_*.txt
+fail_extract.txt
+upgrade_msg.txt
+upgrade_out_scale.txt
+migrate_msg.txt
+migrate_msg2.txt
+probe_root.txt
+query
+queryex
+start
+start.*
+stop
+stop.*
+
+# Local test databases
+_pytest_*_env/
+pytest_probe_dir/
+probe_subdir/
+pm-test-db-*/
+
+# Scratch / temp dirs
+artifacts/
+temp/
+tmp/
+tmp_run/
+_pytest_one_base/
+_pytest_one_env/
+_pytest_run/
+_pytest_temp_env/
+*.backup
+
+# Uploads and media (runtime data - usually not source)
+uploads/
+photo/
+tinious/
+
+# Tools / bin (machine-specific)
+tools/
+*.exe
+*.zip
+
+# Environment
+.env
+*.env
+.env.local
+
+# Workspace-specific
+Preventative-Management-*/
+
+# Keep these files intentionally versioned
+!.gitignore
+!.env.example
+!requirements.txt
+!README.md
+!QUICKSTART.md
+!MAINTENANCE.md
+!SDLC_STAGE_REPORT.md
+!docker-compose.yml
+!docker-compose.dev.yml
+!docker-compose.https.yml
+!Dockerfile
+!Caddyfile
+!.dockerignore
+!pyrightconfig.json
+!.flake8
+!migrations/
+!model.py
+!app.py
+!pm_app/
+!services/
+!tests/
+!templates/
+!static/
+!scripts/
+!docs/
+!alert_system.py
+!postgres-init.sql
+!config/
+!sdlc_stage_status.json
+!sqlite_refs.json

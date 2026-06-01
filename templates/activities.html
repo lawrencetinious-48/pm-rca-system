@@ -1,0 +1,105 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="activities-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <h1 class="mb-0">
+      <i class="bi bi-clock-history me-2"></i>
+      Recent Activities
+      {% if activity_type %}
+      <span class="badge bg-secondary fs-6 ms-2">{{ activity_type|upper }}</span>
+      {% endif %}
+    </h1>
+    
+    {% if not activity_type %}
+    <div class="btn-group" role="group" aria-label="Filter by activity type">
+      <a href="{{ url_for('activities', type='pm') }}" class="btn btn-outline-primary btn-sm">PM</a>
+      <a href="{{ url_for('activities', type='rca') }}" class="btn btn-outline-primary btn-sm">RCA</a>
+      <a href="{{ url_for('activities', type='snag') }}" class="btn btn-outline-primary btn-sm">Snag</a>
+      <a href="{{ url_for('activities', type='dar') }}" class="btn btn-outline-primary btn-sm">DAR</a>
+      <a href="{{ url_for('activities', type='user') }}" class="btn btn-outline-primary btn-sm">User</a>
+      <a href="{{ url_for('activities') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-transparent border-bottom-0 pt-3">
+      <p class="text-muted mb-0">
+        <i class="bi bi-info-circle-fill me-1"></i>
+        Newest activity appears first. Only activities relevant to you are shown.
+      </p>
+    </div>
+    <div class="card-body">
+      {% if activities %}
+      <div class="list-group list-group-flush">
+        {% for act in activities %}
+        <div class="list-group-item px-0 py-3">
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start gap-2">
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <span class="badge 
+                  {% if act.activity_type == 'pm' %}bg-info
+                  {% elif act.activity_type == 'rca' %}bg-warning text-dark
+                  {% elif act.activity_type == 'snag' %}bg-danger
+                  {% elif act.activity_type == 'dar' %}bg-success
+                  {% elif act.activity_type == 'user' %}bg-secondary
+                  {% else %}bg-light text-dark{% endif %}
+                ">
+                  {{ act.activity_type|upper }}
+                </span>
+                <small class="text-muted" title="{{ act.created_at.strftime('%Y-%m-%d %H:%M:%S') }}">
+                  <i class="bi bi-calendar-event me-1"></i>
+                  {{ act.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </small>
+                {% if act.created_by %}
+                <small class="text-muted">
+                  <i class="bi bi-person-circle me-1"></i>{{ act.created_by }}
+                </small>
+                {% endif %}
+              </div>
+              <div class="activity-details">
+                {{ act.details|truncate(200) }}
+              </div>
+            </div>
+            {% if act.activity_type in ('pm', 'rca') and not act.is_approved %}
+            <a href="{{ url_for('view_activity', activity_id=act.id) }}" class="btn btn-sm btn-outline-primary align-self-start">
+              <i class="bi bi-eye-fill me-1"></i>View
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="text-muted mt-2 mb-0">No activities found for you at this time.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if pagination and pagination.pages > 1 %}
+  <nav aria-label="Activities pagination" class="mt-4">
+    <ul class="pagination justify-content-center flex-wrap">
+      <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('activities', type=activity_type, page=pagination.prev_num) if pagination.has_prev else '#' }}">Previous</a>
+      </li>
+      {% for page_num in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+        {% if page_num %}
+        <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('activities', type=activity_type, page=page_num) }}">{{ page_num }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('activities', type=activity_type, page=pagination.next_num) if pagination.has_next else '#' }}">Next</a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

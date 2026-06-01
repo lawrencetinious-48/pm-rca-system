@@ -1,0 +1,110 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="login-page">
+  <nav class="login-role-menu" aria-label="Login menu">
+    <a href="{{ url_for('login') }}" class="{% if not preselected_role %}is-active{% endif %}">
+      <i class="bi bi-grid"></i><span>All</span>
+    </a>
+    <a href="{{ url_for('admin_login') }}" class="{% if preselected_role in ['developer', 'admin'] %}is-active{% endif %}">
+      <i class="bi bi-shield-lock-fill"></i><span>Admin</span>
+    </a>
+    <a href="{{ url_for('staff_login') }}" class="{% if preselected_role == 'staff' %}is-active{% endif %}">
+      <i class="bi bi-person-workspace"></i><span>Staff</span>
+    </a>
+    <a href="{{ url_for('technician_login') }}" class="{% if preselected_role == 'technician' %}is-active{% endif %}">
+      <i class="bi bi-wrench-adjustable-circle"></i><span>Technician</span>
+    </a>
+      <a href="{{ url_for('manager_login') }}" class="{% if preselected_role == 'manager' %}is-active{% endif %}">
+      <i class="bi bi-briefcase-fill"></i><span>Manager</span>
+    </a>
+    <a href="{{ url_for('general_manager_login') }}" class="{% if preselected_role == 'general_manager' %}is-active{% endif %}">
+      <i class="bi bi-clipboard2-check-fill"></i><span>Gen Manager</span>
+    </a>
+  </nav>
+
+  <div class="login-card shadow-sm px-4 py-4">
+
+    <!-- BRAND -->
+    <div class="login-brand text-center mb-4">
+      <h1 class="mt-3">Admin Setup</h1>
+      <p class="text-muted">Create your first admin account</p>
+    </div>
+
+    <!-- FLASH -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- DESCRIPTION -->
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i>
+      <strong>First-Time Setup:</strong> This system has no admin yet. Create the primary admin 
+      account below. This account cannot be duplicated - only ONE admin can be created.
+    </div>
+
+    <!-- FORM -->
+    <form method="POST" action="{{ url_for('self_service_create_developer') }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <!-- Full Name -->
+      <div class="mb-3">
+        <label class="form-label">Full Name *</label>
+        <input type="text" class="form-control" name="full_name" required 
+               placeholder="Enter full name" autocomplete="name">
+      </div>
+
+      <!-- Email -->
+      <div class="mb-3">
+        <label class="form-label">Email Address *</label>
+        <input type="email" class="form-control" name="email" required 
+               placeholder="admin@company.com" autocomplete="email">
+      </div>
+
+      <!-- Password -->
+      <div class="mb-3">
+        <label class="form-label">Password *</label>
+        <input type="password" class="form-control" name="password" required 
+               placeholder="Minimum 8 characters" minlength="8" autocomplete="new-password">
+        <small class="text-muted">Must be at least 8 characters</small>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="mb-3">
+        <label class="form-label">Confirm Password *</label>
+        <input type="password" class="form-control" name="confirm_password" required 
+               placeholder="Re-enter password" autocomplete="new-password">
+      </div>
+
+      <button class="btn btn-primary w-100" type="submit">
+        <i class="bi bi-person-plus"></i> Create Admin Account
+      </button>
+
+      <hr class="my-3">
+
+      <div class="text-center">
+        <small class="text-muted">
+          Already have an account? 
+          <a href="{{ url_for('admin_login') }}">Log in as System Admin</a>
+        </small>
+      </div>
+    </form>
+
+  </div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus first field
+    document.querySelector('input[name="full_name"]').focus();
+  });
+</script>
+
+{% endblock %}

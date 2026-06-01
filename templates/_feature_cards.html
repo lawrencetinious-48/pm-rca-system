@@ -1,0 +1,33 @@
+{% macro feature_card(title, description, icon='bi-grid-1x2', badge=None, card_class='', icon_class='') -%}
+<div class="card feature-card h-100 {{ card_class }}">
+  <div class="card-body d-flex flex-column">
+    <div class="d-flex align-items-start gap-3">
+      <div class="feature-card-icon {{ icon_class }}">
+        <i class="bi {{ icon }}" aria-hidden="true"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <h3 class="h5 mb-0">{{ title }}</h3>
+          {% if badge %}
+            {# badge can be a string (label) or a dict with 'label', 'color', 'class' #}
+            {% if badge is string %}
+              <span class="badge text-bg-light border">{{ badge }}</span>
+            {% else %}
+              <span class="badge {{ badge.get('class', 'text-bg-light border') }}"
+                    {% if badge.get('label') %}aria-label="{{ badge.label }}"{% endif %}>
+                {{ badge.text or badge.label or 'Badge' }}
+              </span>
+            {% endif %}
+          {% endif %}
+        </div>
+        <p class="text-muted mb-0">{{ description }}</p>
+      </div>
+    </div>
+    {% if caller %}
+    <div class="mt-3 d-flex gap-2 flex-wrap">
+      {{ caller() }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro %}

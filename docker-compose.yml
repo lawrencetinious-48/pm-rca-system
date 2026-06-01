@@ -1,0 +1,257 @@
+version: "3.9"
+
+services:
+  # ================= MONITORING STACK =================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pm-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - pm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pm-grafana
+    depends_on:
+      - prometheus
+      - loki
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - pm-network
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: pm-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki:/loki
+      - loki-data:/loki/chunks
+    command: -config.file=/loki/loki-local-config.yaml
+    networks:
+      - pm-network
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: pm-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo:/etc/tempo
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"
+    networks:
+      - pm-network
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: pm-alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    ports:
+      - "9093:9093"
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - pm-network
+    restart: unless-stopped
+
+  # ================= CORE SERVICES =================
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-pm_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pm_db}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
+      REMEMBER_COOKIE_SECURE: ${REMEMBER_COOKIE_SECURE:-0}
+      SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-Lax}
+      SESSION_COOKIE_HTTPONLY: ${SESSION_COOKIE_HTTPONLY:-1}
+      REMEMBER_COOKIE_HTTPONLY: ${REMEMBER_COOKIE_HTTPONLY:-1}
+      PREFERRED_URL_SCHEME: ${PREFERRED_URL_SCHEME:-http}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:5001}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PROMETHEUS_METRICS_ENABLED: "true"
+    ports:
+      - "5001:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    networks:
+      - pm-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: pm-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pm_db}
+      POSTGRES_USER: ${POSTGRES_USER:-pm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pm_user} -d ${POSTGRES_DB:-pm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - pm-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: pm-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    networks:
+      - pm-network
+
+  # ================= ASYNC WORKER =================
+  celery:
+    build: .
+    command: celery -A pm_app.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-pm_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pm_db}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - pm-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # ================= WATCHDOG & REPORTER =================
+  watchdog:
+    build: .
+    command: python -m pm_app.services.daily_reporter
+    depends_on:
+      - web
+      - db
+      - redis
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-pm_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pm_db}
+      REDIS_URL: redis://redis:6379/0
+      WATCHDOG_ENABLED: "true"
+      REPORT_INTERVAL_MINUTES: "90"
+      WATCHDOG_SEND_PERIODIC_SUMMARY: "0"
+      WATCHDOG_SEND_ADMIN_DIGEST: "0"
+      REPORT_EMAIL: ${WATCHDOG_EMAIL:-lawrencemulindwa48@gmail.com}
+      ALERT_EMAIL_ADDRESS: ${ALERT_EMAIL_ADDRESS}
+      ALERT_EMAIL_PASSWORD: ${ALERT_EMAIL_PASSWORD}
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - pm-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+
+networks:
+  pm-network:
+    driver: bridge

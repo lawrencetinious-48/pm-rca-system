@@ -1,0 +1,168 @@
+{#
+  Read-only view of a PM/RCA form submission.
+  Expects `structured` dict in scope (from parse_activity_details_structured).
+  Keys: header_rows, sections, insights, photos, signature_url
+#}
+
+{# ── HEADER TABLE ── #}
+{% if structured.header_rows %}
+  {# ── Branded form header: Airtel (left) + Form ID (center) + Soliton (right) ── #}
+  {% set form_id = None %}
+  {% for label, value in structured.header_rows %}
+    {% if 'form' in label|lower or 'id' in label|lower %}
+      {% set form_id = value %}
+    {% endif %}
+  {% endfor %}
+
+  <div class="pm-form-header d-flex align-items-center justify-content-between mb-3 p-2">
+    <div class="brand-left me-3">
+      <img src="{{ url_for('static', filename='images/airtel-logo.webp') }}" alt="Airtel" class="pm-brand-image align-left" style="max-height:80px;">
+    </div>
+
+    <div class="form-title text-center flex-grow-1">
+      <h5 class="mb-0">Form ID: {{ form_id if form_id else (structured.header_rows[0][1] if structured.header_rows|length else '—') }}</h5>
+    </div>
+
+    <div class="brand-right ms-3">
+      <img src="{{ url_for('static', filename='images/soliton-telmec.jpeg') }}" alt="Soliton Telmec" class="pm-brand-image align-right" style="max-height:80px;">
+    </div>
+  </div>
+
+<div class="pm-section-shell table-responsive mb-4">
+  <table class="table pm-form-table align-middle mb-0">
+    <tbody>
+      {% for label, value in structured.header_rows %}
+      <tr>
+        <th class="pm-label-col bg-light" scope="row">{{ label }}</th>
+        <td class="pm-value-col">{{ value if value else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── SECTION TABLES ── #}
+{% for section in structured.sections %}
+<div class="pm-subsection-shell table-responsive mb-4">
+  <table class="table pm-form-table align-middle mb-0">
+    <thead>
+      <tr>
+        <th class="pm-label-col" scope="col">{{ section.title }}</th>
+        <th class="pm-value-col" scope="col">CURRENT VALUE</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for label, value in section.rows %}
+      <tr>
+        <th class="pm-label-col" scope="row">{{ label }}</th>
+        <td class="pm-value-col">{{ value if value else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+
+{# ── SMART INSIGHTS ── #}
+{% if structured.insights %}
+<div class="pm-subsection-shell table-responsive mb-4">
+  <table class="table pm-form-table align-middle mb-0">
+    <thead>
+      <tr>
+        <th colspan="2" class="bg-primary text-white">SMART INSIGHTS</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set insight_keys = [
+        'Risk Score', 'Risk Level', 'Critical', 'SLA Deadline (UTC)',
+        'Outage Detected', 'Operational Category', 'Incident Categories',
+        'Issue Summary', 'SLA Breach Category'
+      ] %}
+      {% for key in insight_keys %}
+        {% if key in structured.insights %}
+        <tr>
+          <th class="pm-label-col">{{ key }}</th>
+          <td class="pm-value-col">{{ structured.insights[key] }}</td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+      
+      {% set list_keys = ['Critical Flags', 'Anomalies', 'Recommendations', 'Detected Snags'] %}
+      {% for key in list_keys %}
+        {% if key in structured.insights and structured.insights[key] %}
+        <tr>
+          <th class="pm-label-col">{{ key }}</th>
+          <td class="pm-value-col">
+            {% for item in structured.insights[key] %}
+              <div class="mb-1">{{ item }}</div>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── PHOTO SPECIFICATIONS – two‑column grid exactly as Word document ── #}
+{% if structured.photos %}
+<div class="pm-subsection-shell p-3 mb-4">
+  <h5 class="pm-photo-section-title mb-3">PHOTO SPECIFICATIONS</h5>
+  <div class="row g-3">
+    {% for photo in structured.photos %}
+    <div class="col-md-6">
+      <div class="pm-photo-card h-100">
+        <strong class="pm-photo-label d-block mb-2">{{ photo.label }}</strong>
+        {% if photo.url %}
+        <a href="{{ photo.url }}" target="_blank" rel="noopener" class="d-block text-center" title="Open full image" data-no-loader>
+          <img src="{{ photo.url }}" alt="{{ photo.label }}"
+               class="img-fluid rounded border"
+               style="max-height: 240px; width: auto; object-fit: contain;">
+        </a>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          <a href="{{ photo.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" data-no-loader>
+            <i class="bi bi-arrows-fullscreen me-1"></i>Open
+          </a>
+          <a href="{{ photo.url }}" download class="btn btn-sm btn-outline-secondary" data-no-loader>
+            <i class="bi bi-download me-1"></i>Download
+          </a>
+        </div>
+        {% if photo.description %}
+        <p class="pm-photo-system-note text-muted small mt-2">{{ photo.description }}</p>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-light text-center py-3 mb-0">
+          <i class="bi bi-image fs-1 text-muted"></i>
+          <p class="mb-0 mt-1">No photo uploaded.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── TECHNICIAN SIGNATURE ── #}
+{% if structured.signature_url %}
+<div class="pm-subsection-shell p-3 mb-4">
+  <h5 class="mb-3">Technician Signature</h5>
+  <div class="signature-preview-card p-3 bg-light rounded border d-inline-block">
+    <a href="{{ structured.signature_url }}" target="_blank" rel="noopener" class="d-block text-center" data-no-loader>
+      <img src="{{ structured.signature_url }}" alt="Technician Signature"
+           class="img-fluid border"
+           style="max-width: 320px; max-height: 130px; object-fit: contain;">
+    </a>
+    <div class="d-flex flex-wrap gap-2 mt-2">
+      <a href="{{ structured.signature_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" data-no-loader>
+        <i class="bi bi-arrows-fullscreen me-1"></i>Open
+      </a>
+      <a href="{{ structured.signature_url }}" download class="btn btn-sm btn-outline-secondary" data-no-loader>
+        <i class="bi bi-download me-1"></i>Download
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}

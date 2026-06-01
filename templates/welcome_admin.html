@@ -1,0 +1,123 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="welcome-hero">
+    <div class="terms-card">
+        <div class="terms-header">
+            <h1>Welcome to Infinite Technologies PM System</h1>
+            <p>System Version <strong>1.0.0</strong> • First-run onboarding for administrator setup.</p>
+        </div>
+
+        <section class="terms-section">
+            <h2>Terms & Conditions</h2>
+            <p>This Preventative Maintenance (PM) Management System supports recording, tracking, and reporting of maintenance activities, incidents, and operational metrics. It is provided and maintained by Infinite Technologies for authorized organizational use.</p>
+        </section>
+
+        <section class="terms-section">
+            <h3>Definitions</h3>
+            <p><strong>Administrator:</strong> the first user created here and any subsequent user assigned the <code>admin</code> role. <strong>User:</strong> any person with an account in this system.</p>
+        </section>
+
+        <section class="terms-section">
+            <h3>Authorized use</h3>
+            <p>Access is granted only to authorized personnel. Administrators must assign roles and access rights responsibly and ensure least-privilege practices. Users must not attempt to access accounts, roles, or data they are not authorized to view.</p>
+        </section>
+
+        <section class="terms-section">
+            <h3>Data protection & ownership</h3>
+            <p>All data entered into this system is the property of the deploying organization. Administrators should define retention and export policies. Infinite Technologies does not retain ownership of customer data.</p>
+        </section>
+
+        <section class="terms-section">
+            <h3>Security obligations</h3>
+            <ul>
+                <li>Protect passwords and credentials; do not share accounts.</li>
+                <li>Report suspected compromises immediately to your administrator.</li>
+                <li>Avoid uploading sensitive personal data unless permitted by policy.</li>
+            </ul>
+        </section>
+
+        <section class="terms-section">
+            <h3>Administrator responsibilities</h3>
+            <ul>
+                <li>Create and manage user accounts and roles.</li>
+                <li>Maintain backups and recovery plans.</li>
+                <li>Enforce internal policy and secure deployment practices.</li>
+                <li>Rotate secrets and require strong passwords.</li>
+            </ul>
+        </section>
+
+        <section class="terms-section">
+            <h3>Liability & warranty</h3>
+            <p>The software is provided "as-is". Infinite Technologies disclaims implied warranties. The deploying organization is responsible for operational configuration, backups, and secure deployment.</p>
+        </section>
+
+        <section class="terms-section">
+            <p>By continuing, you agree to the terms above. The first administrator account will be created on the next page.</p>
+        </section>
+
+        <div class="terms-actions">
+            <a href="{{ url_for('setup_first_admin') }}" class="btn btn-primary btn-lg">Continue to Create Admin</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .welcome-hero {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        background: linear-gradient(180deg, rgba(24, 32, 71, 0.95) 0%, rgba(36, 59, 121, 0.97) 100%);
+    }
+    .terms-card {
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 24px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
+        max-width: 900px;
+        width: 100%;
+        padding: 32px 40px;
+        color: #222;
+        border: 1px solid rgba(255,255,255,0.4);
+    }
+    .terms-header h1 {
+        margin-bottom: 8px;
+        font-size: 2.4rem;
+        letter-spacing: -0.03em;
+    }
+    .terms-header p {
+        margin: 0;
+        color: #4f5a7e;
+        font-size: 1rem;
+    }
+    .terms-section {
+        margin-top: 24px;
+    }
+    .terms-section h2,
+    .terms-section h3 {
+        margin-bottom: 10px;
+        color: #1f304d;
+    }
+    .terms-section p,
+    .terms-section li {
+        line-height: 1.7;
+        color: #3d4b6b;
+        font-size: 0.98rem;
+    }
+    .terms-section ul {
+        margin: 0;
+        padding-left: 1.3rem;
+    }
+    .terms-actions {
+        margin-top: 32px;
+        text-align: center;
+    }
+    .terms-actions .btn {
+        font-size: 1rem;
+        padding: 14px 28px;
+    }
+</style>
+{% endblock %}

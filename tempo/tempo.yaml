@@ -1,0 +1,46 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+        http:
+
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      instance_addr: 127.0.0.1
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+  trace_idle_timeout: 10s
+  flush_check_period: 1s
+
+processor:
+  traces:
+    num_traces: 1000
+
+compactor:
+  compaction:
+    compaction_window: 1h
+    max_block_time: 1h
+    block_retention: 30d
+  working_directory: /tmp/tempo-compactor
+  shared_store: filesystem
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /tmp/tempo/wal
+    local:
+      path: /tmp/tempo/blocks
+
+query_frontend:
+  log_queries_longer_than: 5s

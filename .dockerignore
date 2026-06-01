@@ -1,0 +1,123 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+instance/
+data.db
+dev_pm.sqlite
+test_pm.sqlite
+
+# Uploaded and generated files
+uploads/
+photo/
+tinious/
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing and coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.pytest_cache/
+.tox/
+
+# Flask / Alembic
+migrations/__pycache__/
+migrations/versions/__pycache__/
+*.pyc
+*.pyo
+
+# Output and temporary files
+out*.txt
+sqlite_refs.*
+fail_extract.txt
+migrate_msg*.txt
+pytest_*.txt
+stage_*.txt
+sla_fix_test_*.txt
+manager_sla_card_test*.txt
+err.txt
+out_*.txt
+out*.json
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*~
+
+# Docker / container files
+docker-compose.override.yml
+.cache/
+.dockerignore
+!Dockerfile
+
+# Secret / private files
+*.key
+*.pem
+*.crt
+.secrets/
+
+# Project specific
+tools/tunnel_url.txt
+change_log_backup.csv
+watchdog_reporter_errors.log
+advanced_watchdog_script.py   # if this is a local dev tool, ignore; otherwise keep
+file_monitor.py                # same as above
+
+# OS specific
+.DS_Store
+Thumbs.db

@@ -1,0 +1,717 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="role-form-shell">
+  <section class="form-hero-lite text-start mb-4">
+    <div class="brand-row justify-content-between align-items-center mb-3 form-brand-row">
+      <img src="{{ url_for('static', filename='images/airtel-logo.webp') }}" alt="Airtel" class="me-3" style="max-height:80px;">
+      <img src="{{ url_for('static', filename='images/soliton-telmec.jpeg') }}" alt="Soliton Telmec" class="ms-3" style="max-height:80px;">
+    </div>
+    <p class="text-muted">Complete and submit your Planned Maintenance or Root Cause Analysis</p>
+  </section>
+
+  <div class="card shadow-sm border-0 form-card">
+    <div class="card-body p-4">
+      <form id="technicianPmForm" action="{{ url_for('field_rca') }}" method="post" enctype="multipart/form-data" data-no-loader>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {# HEADER ROWS – exactly as in Word document                                    #}
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        <div class="pm-section-shell table-responsive mb-4">
+          <table class="table pm-form-table align-middle">
+            <tbody>
+              <tr><th>CLIENT</th><td><input type="text" name="field_client" class="form-control" value="AIRTEL UGANDA" readonly></td></tr>
+              <tr><th>VENDOR</th><td><input type="text" name="field_vendor" class="form-control" value="SOLITON TELMEC (U) LTD" readonly></td></tr>
+              <tr><th>Activity Name</th><td><input type="text" name="field_activity_name" class="form-control" value="AIRTEL UG Planned Preventive Maintenance" readonly></td></tr>
+              <tr><th>Submitted By</th><td><input type="text" name="submitted_by" class="form-control" value="{{ current_user.full_name or current_user.email }}" required></td></tr>
+              <tr><th>Activity Start</th><td><input type="datetime-local" name="activity_start" class="form-control" required></td></tr>
+              <tr><th>Activity End</th><td><input type="datetime-local" name="activity_end" class="form-control" required></td></tr>
+              <tr><th>Site Coordinates (Lat, Long)</th><td><input type="text" name="field_site_coordinates" class="form-control" placeholder="e.g., 0.3476, 32.5825"></td></tr>
+              <tr><th>Equipment Serial Number</th><td><input type="text" name="field_equipment_serial" class="form-control" placeholder="Enter equipment serial"></td></tr>
+              <tr><th>Maintenance Tools Used</th><td><input type="text" name="field_tools_used" class="form-control" placeholder="List tools used"></td></tr>
+              <tr><th>Weather Conditions</th><td><select name="field_weather" class="form-select">
+                <option value="">-- Select Weather --</option>
+                <option value="Sunny">Sunny</option>
+                <option value="Cloudy">Cloudy</option>
+                <option value="Rainy">Rainy</option>
+                <option value="Windy">Windy</option>
+              </select></td></tr>
+              <tr><th>Validation Comments (By Technician)</th><td><textarea name="validation_comments" class="form-control" rows="3"></textarea></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {# ACTIVITY TYPE (system extra – not in Word doc, but required)               #}
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        <div class="pm-section-shell table-responsive mb-4">
+          <table class="table pm-form-table align-middle">
+            <thead>
+              <tr><th colspan="2">Form Details</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>Activity Type</th>
+                <td>
+                  <select name="activity_type" class="form-select" required>
+                    <option value="">-- Select Activity Type --</option>
+                    <option value="pm">Planned Maintenance (PM)</option>
+                    <option value="rca">Root Cause Analysis (RCA)</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {# ALL DYNAMIC SECTIONS (from TECHNICIAN_PM_SECTIONS)                          #}
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {% for section in pm_sections %}
+        <div class="pm-subsection-shell table-responsive mb-4">
+          <table class="table pm-form-table align-middle">
+            <thead>
+              <tr><th colspan="2">{{ section.title }}</th></tr>
+            </thead>
+            <tbody>
+              {% for field in section.fields %}
+              <tr>
+                <th>{{ field }}</th>
+                <td>
+                  {% set field_slug = slugify_label(field) %}
+                  {% if field == 'Site Number' and site_master %}
+                    <select name="field_{{ field_slug }}" id="siteMasterSelect" class="form-select" required>
+                      <option value="">-- Select site --</option>
+                      {% for site in site_master %}
+                        <option value="{{ site.site_id }}">{{ site.site_id }} - {{ site.site_name }}</option>
+                      {% endfor %}
+                    </select>
+                  {% elif field == 'Site Name' and site_master %}
+                    <input name="field_{{ field_slug }}" id="siteNameAutofill" class="form-control" placeholder="Site name fills after Site Number" required readonly>
+                  {% elif field == 'Site Type' and site_master %}
+                    {% set site_types = site_master|map(attribute='site_type')|reject('equalto', '')|unique|list %}
+                    <select name="field_{{ field_slug }}" id="siteTypeAutofill" class="form-select">
+                      <option value="">-- Select site type --</option>
+                      {% for site_type in site_types %}
+                        <option value="{{ site_type }}">{{ site_type }}</option>
+                      {% endfor %}
+                    </select>
+                  {% elif is_yes_no_label(field) %}
+                    <select name="field_{{ field_slug }}" class="form-select" {% if field in ['Site Number', 'Site Name'] %}required{% endif %}>
+                      <option value="">-- Select --</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="N/A">N/A</option>
+                    </select>
+                  {% else %}
+                    <input name="field_{{ field_slug }}" class="form-control" placeholder="Enter {{ field|lower }}" {% if field in ['Site Number', 'Site Name'] %}required{% endif %}>
+                    {% if field == 'Site Number' and not site_master %}
+                      <div class="form-text text-muted">Site list is unavailable. Enter the site number manually.</div>
+                    {% endif %}
+                    {% if field == 'Site Name' and not site_master %}
+                      <div class="form-text text-muted">Enter the site name manually when the site master is not loaded.</div>
+                    {% endif %}
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {# PHOTO SPECIFICATIONS – two‑column grid (exactly as Word doc)               #}
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        <div class="pm-subsection-shell p-3 mb-4">
+          <h5 class="pm-photo-section-title mb-3">PHOTO SPECIFICATIONS</h5>
+          <div class="row g-3">
+            {% for photo in photo_fields %}
+            {% if photo.key == 'rectifier_settings_1' %}
+            <div class="col-12">
+              <div class="alert alert-primary d-flex align-items-center gap-2 mb-0">
+                <i class="bi bi-images fs-4"></i>
+                <div>
+                  <strong>Rectifier Settings</strong>
+                  <div class="small">Upload four clear rectifier setting images: screen 1, screen 2, screen 3, and screen 4.</div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            <div class="col-md-6">
+              <div class="pm-photo-card technician-photo-upload h-100">
+                <label class="fw-semibold d-block mb-2" for="photo_{{ photo.key }}">{{ photo.label }}</label>
+                <label class="photo-upload-placeholder" for="photo_{{ photo.key }}">
+                  <i class="bi bi-image"></i>
+                  <img class="photo-upload-preview" alt="{{ photo.label }} preview" hidden>
+                  <span class="photo-upload-text">Tap to add image</span>
+                  <span class="photo-quality-text small text-muted">Clear, landscape photos work best</span>
+                </label>
+                 <input id="photo_{{ photo.key }}" type="file" name="photo_{{ photo.key }}" accept="image/*" capture="environment" class="visually-hidden">
+                 <small class="text-muted photo-quality-result">Upload a clear image from camera or gallery</small>
+                 <button type="button" class="btn btn-sm btn-outline-danger photo-clear-button mt-2" aria-label="Remove photo">
+                   <i class="bi bi-trash3 me-1"></i> Remove photo
+                 </button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {# TECHNICIAN SIGNATURE – as in Word document                                  #}
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        <div class="pm-subsection-shell p-3 mb-4">
+          <h5 class="mb-2">Technician Signature</h5>
+          <p class="text-muted small mb-3">Draw your signature below to confirm this submission</p>
+          <div class="signature-container mb-3">
+            <canvas id="signature-pad" style="border:2px solid #dee2e6; width:100%; height:150px; background:#fff;"></canvas>
+            <input type="hidden" name="signature_data" id="signature-data">
+            <div class="mt-2 d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSignature()">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Clear Signature
+              </button>
+              <small class="text-muted align-self-center">Click or drag to sign</small>
+            </div>
+          </div>
+        </div>
+
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        {# FORM ACTIONS                                                               #}
+        {# ─────────────────────────────────────────────────────────────────────────── #}
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Cancel
+          </a>
+          <button type="submit" class="btn btn-primary btn-lg" id="technicianSubmitButton">
+            <i class="bi bi-check-circle me-2"></i>Submit Form
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mt-3 mb-4 p-3 bg-light">
+    <div class="d-flex align-items-start gap-3">
+      <div class="flex-shrink-0">
+        <i class="bi bi-info-circle text-info" style="font-size:1.5rem;"></i>
+      </div>
+      <div class="flex-grow-1">
+        <h6 class="mb-1">Form Tips</h6>
+        <ul class="small text-muted mb-0 ps-3">
+          <li>Fill all required fields before submitting</li>
+          <li>Select Site Number to autofill known site details from the Airtel master list</li>
+          <li>Your text entries are saved as a local draft while you work</li>
+          <li>Your signature confirms you completed this work</li>
+          <li>Once submitted, staff will review your form</li>
+          <li>You can view your submissions in the dashboard</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-center text-muted small mt-4 mb-0">
+    Form Submission Portal | Field Technician
+  </p>
+</div>
+
+<style>
+  .technician-photo-upload {
+    display: flex;
+    flex-direction: column;
+  }
+  .photo-upload-placeholder {
+    min-height: 132px;
+    border: 2px dashed #b6c2d2;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: .35rem;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+    overflow: hidden;
+    position: relative;
+  }
+  .photo-upload-placeholder:hover {
+    border-color: #0d6efd;
+    background: #eef5ff;
+    color: #0d6efd;
+  }
+  .photo-upload-placeholder .bi {
+    font-size: 2.25rem;
+    line-height: 1;
+  }
+  .photo-upload-text {
+    font-size: .9rem;
+    font-weight: 600;
+  }
+  .photo-quality-text {
+    font-weight: 500;
+  }
+  .photo-upload-preview {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .photo-upload-placeholder.has-preview {
+    min-height: 220px;
+    border-style: solid;
+    background: #fff;
+    padding: .5rem;
+  }
+  .photo-upload-placeholder.has-preview .bi,
+  .photo-upload-placeholder.has-preview .photo-quality-text,
+  .photo-upload-placeholder.has-preview .photo-upload-text {
+    display: none;
+  }
+  .photo-clear-button {
+    display: none;
+    width: 100%;
+  }
+  .pm-photo-card.has-preview .photo-clear-button {
+    display: inline-flex;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/heic2any/dist/heic2any.min.js"></script>
+<script>
+  console.log('=== field_rca.js initializing ===');
+  const canvas = document.getElementById('signature-pad');
+  const ctx = canvas.getContext('2d');
+  let isDrawing = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  function resizeCanvas() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const width = canvas.offsetWidth;
+    const height = 150;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.style.height = `${height}px`;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  function getPointerPosition(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  }
+
+  function startDrawing(event) {
+    isDrawing = true;
+    const pos = getPointerPosition(event);
+    lastX = pos.x;
+    lastY = pos.y;
+  }
+
+  function draw(event) {
+    if (!isDrawing) return;
+    event.preventDefault();
+    const pos = getPointerPosition(event);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    lastX = pos.x;
+    lastY = pos.y;
+  }
+
+  function stopDrawing() {
+    isDrawing = false;
+  }
+
+  function isSignatureEmpty() {
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    return canvas.toDataURL() === blank.toDataURL();
+  }
+
+  function clearSignature() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('signature-data').value = '';
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  canvas.addEventListener('pointerdown', startDrawing);
+  canvas.addEventListener('pointermove', draw);
+  canvas.addEventListener('pointerup', stopDrawing);
+  canvas.addEventListener('pointerleave', stopDrawing);
+
+  const technicianForm = document.getElementById('technicianPmForm');
+  const draftKey = 'technician-pm-form-draft-v2';
+  const siteMaster = {{ site_master|tojson }};
+  const siteMasterById = new Map(siteMaster.map((site) => [site.site_id, site]));
+
+  function draftableFields() {
+    return Array.from(technicianForm.querySelectorAll('input:not([type="file"]):not([type="hidden"]), textarea, select'));
+  }
+
+  function saveDraft() {
+    const draft = {};
+    draftableFields().forEach((field) => {
+      if (field.name) draft[field.name] = field.value;
+    });
+    localStorage.setItem(draftKey, JSON.stringify({ savedAt: new Date().toISOString(), values: draft }));
+  }
+
+  function restoreDraft() {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const values = parsed.values || {};
+      draftableFields().forEach((field) => {
+        if (field.name && Object.prototype.hasOwnProperty.call(values, field.name) && !field.value) {
+          field.value = values[field.name];
+        }
+      });
+    } catch (err) {
+      localStorage.removeItem(draftKey);
+    }
+  }
+
+  restoreDraft();
+  technicianForm.addEventListener('input', saveDraft);
+  technicianForm.addEventListener('change', saveDraft);
+
+  // Auto-populate date/time fields with current local timestamp
+  function autoPopulateDates() {
+    const now = new Date();
+    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    const isoLocal = localDate.toISOString().slice(0, 16);
+    
+    const activityStartField = document.querySelector('input[name="activity_start"]');
+    const activityEndField = document.querySelector('input[name="activity_end"]');
+    
+    if (activityStartField && !activityStartField.value) {
+      activityStartField.value = isoLocal;
+    }
+    if (activityEndField && !activityEndField.value) {
+      activityEndField.value = isoLocal;
+    }
+  }
+  
+  // Auto-populate date/time on page load
+  autoPopulateDates();
+
+  function setFieldBySlug(slug, value, overwrite = true) {
+    const field = technicianForm.querySelector(`[name="field_${slug}"]`);
+    if (!field) return;
+    if (overwrite || !field.value) {
+      field.value = value || '';
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+
+  function applySiteMaster(site) {
+    if (!site) return;
+    setFieldBySlug('site_name', site.site_name);
+    setFieldBySlug('site_type', site.site_type);
+    setFieldBySlug('rectifier_type', site.rectifier_type, false);
+    setFieldBySlug('rectifier_module_capacity', site.rectifier_module_capacity, false);
+    setFieldBySlug('no_of_rectifiers_modules_present', site.rectifier_modules, false);
+    setFieldBySlug('no_of_faulty_rectifier_modules', site.faulty_rectifier_modules, false);
+    setFieldBySlug('battery_capacity', site.battery_capacity, false);
+    setFieldBySlug('number_of_battery_strings', site.battery_strings, false);
+    setFieldBySlug('total_number_of_batteries_at_site', site.battery_count, false);
+    setFieldBySlug('approximate_battery_backup_time', site.battery_backup_time, false);
+    setFieldBySlug('is_site_connected_to_grid', site.grid_available, false);
+    setFieldBySlug('was_grid_available_during_site_visit', site.grid_available, false);
+    setFieldBySlug('meter_type_post_pre_paid', site.grid_readings, false);
+    setFieldBySlug('dc_location_indoor_outdoor', site.indoor_outdoor, false);
+    setFieldBySlug('battery_bank_location_indoor_outdoor', site.indoor_outdoor, false);
+    setFieldBySlug('is_hybrid_installed', site.hybrid_available, false);
+  }
+
+  const siteSelect = document.getElementById('siteMasterSelect');
+  if (siteSelect) {
+    siteSelect.addEventListener('change', function() {
+      applySiteMaster(siteMasterById.get(siteSelect.value));
+      saveDraft();
+    });
+    if (siteSelect.value) applySiteMaster(siteMasterById.get(siteSelect.value));
+  }
+
+    // Enhanced image processing functions
+    async function processImage(file) {
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+        if (!file || file.size === 0) {
+            throw new Error("Selected image is empty.");
+        }
+
+        if (file.size > MAX_SIZE) {
+            throw new Error("Image is too large. Max allowed is 10MB.");
+        }
+
+        const lowerName = file.name.toLowerCase();
+
+        const isHeic =
+            file.type === 'image/heic' ||
+            file.type === 'image/heif' ||
+            lowerName.endsWith('.heic') ||
+            lowerName.endsWith('.heif');
+
+        const supportedTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/gif',
+            'image/heic',
+            'image/heif',
+            'application/octet-stream',
+            ''
+        ];
+
+        if (!supportedTypes.includes(file.type) && !isHeic) {
+            throw new Error(
+                'Unsupported image format. Please use JPG, PNG, WebP, HEIC, or HEIF.'
+            );
+        }
+
+        // Real HEIC conversion using heic2any
+        if (isHeic) {
+            try {
+                const convertedBlob = await heic2any({
+                    blob: file,
+                    toType: 'image/jpeg',
+                    quality: 0.9
+                });
+
+                return new File(
+                    [convertedBlob],
+                    file.name.replace(/\.\w+$/, '.jpg'),
+                    {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    }
+                );
+            } catch (err) {
+                console.error('HEIC conversion failed:', err);
+                throw new Error(
+                    'This HEIC image could not be converted. Please take a screenshot and upload it again.'
+                );
+            }
+        }
+
+        // Test browser decoding
+        const imageBitmap = await createImageBitmap(file).catch(() => null);
+
+        if (!imageBitmap) {
+            throw new Error(
+                'This image could not be processed. Please select another image.'
+            );
+        }
+
+        // Compress large images
+        if (file.size > 4 * 1024 * 1024) {
+            return await compressImage(file);
+        }
+
+        return file;
+    }
+
+    async function compressImage(file, quality = 0.8) {
+        return new Promise((resolve, reject) => {
+
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob(
+                    (blob) => {
+                        URL.revokeObjectURL(objectUrl);
+
+                        if (!blob) {
+                            reject(new Error('Compression failed'));
+                            return;
+                        }
+
+                        resolve(new File(
+                            [blob],
+                            file.name.replace(/\.\w+$/, '.jpg'),
+                            {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            }
+                        ));
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Image decode failed'));
+            };
+
+            img.src = objectUrl;
+        });
+    }
+
+    async function forceConvertToJpeg(file) {
+        return compressImage(file, 0.9);
+    }
+
+    function resetPhotoCard(card) {
+      if (!card) return;
+      const input = card.querySelector('input[type="file"]');
+      const preview = card.querySelector('.photo-upload-preview');
+      const placeholder = card.querySelector('.photo-upload-placeholder');
+      const clearButton = card.querySelector('.photo-clear-button');
+      const status = card.querySelector('.photo-quality-result');
+      const uploadText = card.querySelector('.photo-upload-text');
+      if (input) {
+        input.value = '';
+        delete input._processedFile;
+      }
+      if (preview) {
+        preview.removeAttribute('src');
+        preview.hidden = true;
+        preview.style.display = 'none';
+      }
+      if (placeholder) {
+        placeholder.classList.remove('has-preview');
+      }
+      if (card) {
+        card.classList.remove('has-preview');
+      }
+      if (uploadText) {
+        uploadText.textContent = 'Tap to add image';
+      }
+      if (status) {
+        status.textContent = 'Upload a clear image from camera or gallery';
+        status.className = 'text-muted photo-quality-result';
+      }
+    }
+
+    technicianForm.querySelectorAll('input[type="file"][accept*="image"]').forEach((input) => {
+      input.addEventListener('change', async function() {
+        const card = input.closest('.pm-photo-card');
+        const status = card?.querySelector('.photo-quality-result');
+        const placeholder = card?.querySelector('.photo-upload-placeholder');
+        const preview = card?.querySelector('.photo-upload-preview');
+        const uploadText = card?.querySelector('.photo-upload-text');
+        const file = input.files && input.files[0];
+        if (!status || !file) return;
+
+        status.textContent = 'Processing...';
+        status.className = 'text-muted photo-quality-result';
+
+        try {
+            let processedFile = await processImage(file);
+
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                if (preview && placeholder) {
+                    preview.src = e.target.result;
+                    preview.hidden = false;
+                    preview.style.display = 'block';
+                    placeholder.classList.add('has-preview');
+                }
+                if (card) {
+                    card.classList.add('has-preview');
+                }
+
+                if (uploadText) {
+                    uploadText.textContent = processedFile.name;
+                }
+
+                const img = new Image();
+
+                img.onload = function () {
+                    const megapixels = ((img.width * img.height) / 1000000).toFixed(2);
+                    if (img.width < 640 || img.height < 480) {
+                        status.textContent = `Low resolution: ${img.width}x${img.height}px (${megapixels}MP). Retake if possible.`;
+                        status.className = 'text-warning photo-quality-result';
+                    } else {
+                        status.textContent = `Ready: ${img.width}x${img.height}px (${megapixels}MP).`;
+                        status.className = 'text-success photo-quality-result';
+                    }
+                    input._processedFile = processedFile;
+                };
+
+                img.onerror = function () {
+                    status.textContent = 'Preview failed. Please choose another image.';
+                    status.className = 'text-danger photo-quality-result';
+                    delete input._processedFile;
+                };
+
+                img.src = e.target.result;
+            };
+
+            reader.onerror = function () {
+                status.textContent = 'Failed to read image data.';
+                status.className = 'text-danger photo-quality-result';
+                delete input._processedFile;
+            };
+
+            reader.readAsDataURL(processedFile);
+
+        } catch (err) {
+            console.error('Image processing error:', err);
+            status.textContent = err.message || 'Image processing failed.';
+            status.className = 'text-danger photo-quality-result';
+            delete input._processedFile;
+        }
+      });
+    });
+
+    document.querySelectorAll('.photo-clear-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        const card = button.closest('.pm-photo-card');
+        resetPhotoCard(card);
+      });
+    });
+
+  function clearSignature() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('signature-data').value = '';
+  }
+
+  technicianForm.addEventListener('submit', function(e) {
+    if (isSignatureEmpty()) {
+      e.preventDefault();
+      alert('Please provide your signature.');
+      return;
+    }
+    document.getElementById('signature-data').value = canvas.toDataURL();
+  });
+
+   // Global error handler to catch any uncaught issues
+   window.addEventListener('error', function(e) {
+     console.error('Global error:', e.error, 'at', e.filename, 'line', e.lineno);
+   });
+   
+   console.log('=== field_rca.js initialized ===');
+</script>
+{% endblock %}

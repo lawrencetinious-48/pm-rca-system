@@ -1,0 +1,203 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="photo-library-shell role-dashboard-shell role-admin">
+  <section class="dashboard-hero-lite photo-library-hero">
+    <div>
+      <h1><i class="bi bi-images me-2"></i>Monitored Photo Library</h1>
+      <p class="text-muted mb-0">
+        Scans the <strong>photo</strong> folder, generates system descriptions, and lets you import selected images into the app upload store.
+      </p>
+    </div>
+  </section>
+
+  {# Stats cards #}
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="card photo-library-stat-card h-100">
+        <div class="card-body">
+          <div class="photo-library-stat-label">Visible Images</div>
+          <div class="photo-library-stat-value">{{ photo_library_total }}</div>
+          <div class="small text-muted">From the monitored photo source.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card photo-library-stat-card h-100">
+        <div class="card-body">
+          <div class="photo-library-stat-label">Screenshots In View</div>
+          <div class="photo-library-stat-value">{{ screenshot_count }}</div>
+          <div class="small text-muted">Detected by filename heuristics.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card photo-library-stat-card h-100">
+        <div class="card-body">
+          <div class="photo-library-stat-label">Monitored Path</div>
+          <div class="photo-library-path">{{ photo_library_path }}</div>
+          <div class="small text-muted">Additional monitored source: {{ monitored_sources|join(', ') }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Toolbar: search, limit, refresh #}
+  <div class="card photo-library-toolbar-card mb-4">
+    <div class="card-body">
+      <form method="get" action="{{ url_for('admin_photo_library') }}" class="row g-2 align-items-end" id="photoLibraryForm">
+        <div class="col-12 col-md-6 col-lg-5">
+          <label class="form-label mb-1" for="photoLibrarySearch">Search images</label>
+          <input id="photoLibrarySearch" type="search" name="q" class="form-control" value="{{ photo_query }}" placeholder="Search by filename or generated description">
+        </div>
+        <div class="col-12 col-md-3 col-lg-2">
+          <label class="form-label mb-1" for="photoLibraryLimit">Show</label>
+          <select id="photoLibraryLimit" name="limit" class="form-select">
+            {% for size in [12, 24, 48, 96] %}
+              {% if size <= photo_library_controls.max_scan_limit %}
+                <option value="{{ size }}" {% if photo_limit == size %}selected{% endif %}>{{ size }} images</option>
+              {% endif %}
+            {% endfor %}
+            {% if photo_library_controls.max_scan_limit not in [12, 24, 48, 96] %}
+              <option value="{{ photo_library_controls.max_scan_limit }}" selected>{{ photo_library_controls.max_scan_limit }} images (policy max)</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2 col-lg-2 d-grid">
+          <button type="submit" class="btn btn-primary" id="scanBtn">
+            <i class="bi bi-search me-1"></i> Scan
+          </button>
+        </div>
+        <div class="col-6 col-md-2 col-lg-2 d-grid">
+          <a href="{{ url_for('admin_photo_library') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-repeat me-1"></i> Reset
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Image grid #}
+  {% if photo_entries %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+      {% for entry in photo_entries %}
+        <div class="col d-flex">
+          <div class="card photo-library-card w-100 h-100 shadow-sm">
+            <a href="{{ entry.preview_url }}" target="_blank" rel="noopener" class="photo-library-image-link d-block overflow-hidden rounded-top" style="background: #f0f2f5;">
+              <img src="{{ entry.preview_url }}" alt="{{ entry.name }}" class="photo-library-image w-100" style="aspect-ratio: 4/3; object-fit: cover;" loading="lazy"
+                   onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/placeholder-image.png') }}'; this.style.objectFit='contain';">
+            </a>
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                  <h5 class="photo-library-title mb-1 text-truncate" style="max-width: 180px;" title="{{ entry.name }}">{{ entry.name }}</h5>
+                  <div class="small text-muted">{{ entry.modified_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                </div>
+                <span class="photo-kind-badge photo-kind-{{ entry.kind }} badge rounded-pill">{{ entry.kind|title }}</span>
+              </div>
+
+              <p class="photo-library-description small">{{ entry.description }}</p>
+
+              <div class="photo-library-meta d-flex gap-3 mb-3 small text-muted">
+                <span><i class="bi bi-file-earmark-image"></i> {{ entry.extension|upper }}</span>
+                <span><i class="bi bi-hdd"></i> {{ entry.size_kb }} KB</span>
+              </div>
+
+              <div class="mt-auto d-flex flex-wrap gap-2">
+                <a href="{{ entry.preview_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-eye me-1"></i> Open
+                </a>
+                <form method="post" action="{{ url_for('import_photo_library_file') }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="filename" value="{{ entry.name }}">
+                  <button type="submit" class="btn btn-sm btn-primary" {% if not photo_library_controls.allow_import %}disabled title="Import disabled by admin policy"{% endif %}>
+                    <i class="bi bi-cloud-upload me-1"></i> Import
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card photo-library-empty-card text-center py-5">
+      <div class="card-body">
+        <div class="photo-library-empty-icon mb-3">
+          <i class="bi bi-images display-1 text-muted"></i>
+        </div>
+        <h4>No monitored images found</h4>
+        <p class="text-muted mb-0">Add images to the <strong>photo</strong> folder or clear the current search filter.</p>
+      </div>
+    </div>
+  {% endif %}
+
+  {# Loading spinner overlay (shown on form submit) #}
+  <div id="photoLibraryLoader" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-none justify-content-center align-items-center" style="z-index: 1050;">
+    <div class="spinner-border text-light" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const form = document.getElementById('photoLibraryForm');
+    const loader = document.getElementById('photoLibraryLoader');
+    if (form && loader) {
+      form.addEventListener('submit', function() {
+        loader.classList.remove('d-none');
+        loader.classList.add('d-flex');
+      });
+    }
+    // If images fail to load, replace with placeholder (already handled by onerror)
+  })();
+</script>
+
+<style>
+  .photo-library-image-link {
+    background: #f8f9fa;
+    transition: opacity 0.2s;
+  }
+  .photo-library-image-link:hover {
+    opacity: 0.9;
+  }
+  .photo-library-card .card-body {
+    min-height: 14rem;
+  }
+  .photo-library-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .photo-library-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-height: 4.5rem;
+    line-height: 1.4rem;
+  }
+  .photo-kind-badge {
+    background: #e9ecef;
+    color: #495057;
+    font-weight: normal;
+  }
+  .photo-kind-screenshot {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .photo-kind-image {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+  @media (max-width: 768px) {
+    .photo-library-title {
+      font-size: 0.9rem;
+    }
+    .photo-library-description {
+      font-size: 0.8rem;
+    }
+  }
+</style>
+{% endblock %}

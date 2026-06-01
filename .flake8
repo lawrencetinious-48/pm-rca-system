@@ -1,0 +1,66 @@
+[flake8]
+# Maximum line length — 120 is the recommended limit for readability.
+# Existing legacy lines up to 200 are allowed but will show a warning (E501).
+# To treat >120 as error, set `max-line-length = 120` and use `per-file-ignores` for legacy files.
+max-line-length = 120
+# Allow legacy files to exceed 120 without error (but still show warning).
+# Add specific files that are known to have long lines (e.g., app.py, model.py).
+per-file-ignores =
+    app.py: E501
+    model.py: E501
+    pm_app/dashboards/routes.py: E501
+    pm_app/auth/routes.py: E501
+    pm_app/api/routes.py: E501
+
+# Directories excluded from linting (generated code, migrations, venvs, caches, uploads, etc.)
+exclude =
+    .venv,
+    venv,
+    .git,
+    __pycache__,
+    migrations,
+    instance,
+    tinious,
+    uploads,
+    photo,
+    static,
+    templates,
+    tests/__pycache__,
+    .pytest_cache,
+    .mypy_cache,
+    .ruff_cache,
+    .tox,
+    dist,
+    build,
+    *.egg-info,
+    logs,
+    tools
+
+# Lint only Python files
+filename = *.py
+
+# Ignore style rules that are often contentious or conflict with Black formatting.
+# E203: whitespace before ':' (conflicts with slicing)
+# E231: missing whitespace after ',' (often false positive with multi-line)
+# E501: line too long (handled by max-line-length + per-file-ignores)
+# W503: line break before binary operator (PEP 8 recommends after, but Black uses before)
+# E241: multiple spaces after ',' (used for column alignment)
+# E302/E303/E305: blank line counts (style only, not critical)
+# E306: blank line before nested def (style only)
+# E402: module level import not at top of file (sometimes needed in app factory)
+ignore = E203, E231, E501, W503, E241, E302, E303, E305, E306, E402
+
+# Cyclomatic complexity limit — functions above this will raise an error.
+# The original monolithic app.py has many high-complexity functions; we set a generous limit.
+# Over time, reduce this to 15 by refactoring.
+max-complexity = 25
+
+# Show total error count and statistics summary.
+count = True
+statistics = True
+
+# Output format: default is 'default', but 'pylint' is also readable.
+# format = default
+
+# Allow multi-line strings (they are often unavoidable in SQL queries).
+inline-quotes = double

@@ -1,0 +1,89 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="main-container">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div>
+      <h1 class="mb-1"><i class="bi bi-people-fill me-2"></i>Account Profiles</h1>
+      <p class="text-muted mb-0">Browse users and jump into admin controls.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('add_technician') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Add Technician</a>
+        <a href="{{ url_for('add_staff') }}" class="btn btn-outline-primary"><i class="bi bi-person-plus me-1"></i>Add Staff</a>
+        <a href="{{ url_for('admin_user_control') }}" class="btn btn-outline-secondary"><i class="bi bi-sliders me-1"></i>Admin Controls</a>
+      {% else %}
+        <span class="badge text-bg-light border"><i class="bi bi-eye me-1"></i>View-only access</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-md-8">
+          <label class="form-label">Search users</label>
+          <input type="search" class="form-control" name="q" value="{{ search_query or '' }}" placeholder="Email, name, UID, region, role">
+        </div>
+        <div class="col-6 col-md-2 d-grid">
+          <button class="btn btn-primary" type="submit">Search</button>
+        </div>
+        <div class="col-6 col-md-2 d-grid">
+          <a class="btn btn-outline-secondary" href="{{ url_for('admin_staff') }}">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>UID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+              <tr>
+                <td><code>{{ user.uid or '-' }}</code></td>
+                <td>{{ user.display_name }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role|replace('_', ' ')|title }}</td>
+                <td>
+                  {% if user.is_blocked %}
+                    <span class="badge text-bg-danger">Blocked</span>
+                  {% else %}
+                    <span class="badge text-bg-success">Active</span>
+                  {% endif %}
+                </td>
+                <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+                <td class="text-end">
+                  <a href="{{ url_for('admin_user_control') }}" class="btn btn-sm btn-outline-primary">Edit Profile</a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">No users found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if pagination %}
+    <p class="text-muted small text-center mt-3">
+      Showing {{ users|length }} of {{ pagination.total }} matched users on page {{ pagination.page }} of {{ pagination.pages or 1 }}.
+    </p>
+  {% endif %}
+</div>
+{% endblock %}

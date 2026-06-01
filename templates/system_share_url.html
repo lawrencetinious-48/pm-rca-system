@@ -1,0 +1,301 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="review-board">
+  <div class="review-headline-card">
+    <h1><i class="bi bi-share-fill me-2"></i>Share This App</h1>
+    <p class="text-muted mb-0">Copy the link below and send it to anyone who needs access.</p>
+  </div>
+
+  <div class="mt-4">
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# PUBLIC INTERNET LINK (with auto‑refresh and QR code later)                  #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {% if public_login_url %}
+      <div class="card shadow-sm border-0 mb-4 share-card">
+        <div class="card-body p-4">
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <i class="bi bi-globe2 text-primary fs-3"></i>
+            <h4 class="mb-0">Public Internet Link</h4>
+            <span class="badge bg-success ms-2">Live</span>
+            {% if public_url_source and public_url_source != 'none' %}
+              <span class="badge bg-light text-dark border ms-1">Source: {{ public_url_source }}</span>
+            {% endif %}
+          </div>
+          <p class="text-muted small mb-3">Anyone anywhere can use this link — no Wi‑Fi sharing needed.</p>
+          <div class="input-group">
+            <input type="text" id="tunnel-url-input" class="form-control form-control-lg font-monospace bg-light"
+                   value="{{ public_login_url }}" readonly aria-label="Public login URL">
+            <button class="btn btn-primary" id="copyPublicUrlBtn" type="button">
+              <i class="bi bi-clipboard me-1"></i>Copy
+            </button>
+          </div>
+          <div class="mt-2">
+            <small id="copyPublicMsg" class="text-success" style="display: none;">Copied to clipboard!</small>
+          </div>
+          <div class="mt-3">
+            <a id="open-in-browser-link" href="{{ public_login_url }}" target="_blank" rel="noopener" class="btn btn-outline-primary">
+              <i class="bi bi-box-arrow-up-right me-1"></i>Open in browser
+            </a>
+          </div>
+          <div class="mt-4 share-qr-shell">
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+              <div>
+                <p class="mb-1 fw-semibold">QR Code</p>
+                <p class="text-muted small mb-0">Scannable QR updates automatically when the share link changes.</p>
+              </div>
+              <span class="badge bg-primary-subtle text-primary border">Auto-refresh</span>
+            </div>
+            <div class="share-qr-card">
+              <img id="shareQrImage" alt="Technician login QR code" class="share-qr-image" src="" />
+              <div class="share-qr-meta">
+                <span id="shareQrStatus">Generating QR...</span>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button type="button" id="refreshQrBtn" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>Refresh QR
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>
+          <strong>Public link is preparing.</strong> Refresh this page in a few seconds. The share link will appear automatically.
+        </div>
+      </div>
+    {% endif %}
+
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# LOCAL NETWORK LINK                                                          #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    <div class="card shadow-sm border-0 mb-4 share-card">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i class="bi bi-wifi text-info fs-3"></i>
+          <h4 class="mb-0">Local Network (Wi‑Fi) Link</h4>
+        </div>
+        <p class="text-muted small mb-3">Works for anyone on the same Wi‑Fi or office network.</p>
+        <div class="input-group">
+          <input type="text" id="lan-url-input" class="form-control form-control-lg font-monospace bg-light"
+                 value="{{ lan_url }}" readonly aria-label="Local network URL">
+          <button class="btn btn-outline-primary" id="copyLanUrlBtn" type="button">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
+        <div class="mt-2">
+          <small id="copyLanMsg" class="text-success" style="display: none;">Copied to clipboard!</small>
+        </div>
+      </div>
+    </div>
+
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    {# HELPER CARD                                                                 #}
+    {# ─────────────────────────────────────────────────────────────────────────── #}
+    <div class="card bg-light border-0">
+      <div class="card-body">
+        <h5 class="mb-2"><i class="bi bi-info-circle-fill me-1"></i>Share in one step</h5>
+        <p class="mb-0 text-muted">Copy the <strong>Public Internet Link</strong> above and send it. People can open it directly and log in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function() {
+    // Helper: copy text to clipboard with modern API + fallback
+    async function copyToClipboard(text, successMsgElement) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          // Fallback using textarea execCommand (deprecated but works)
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        if (successMsgElement) {
+          successMsgElement.style.display = 'inline';
+          setTimeout(() => { successMsgElement.style.display = 'none'; }, 2000);
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        alert('Could not copy link. Please copy it manually.');
+      }
+    }
+
+    // Copy buttons for public and LAN URLs
+    const publicInput = document.getElementById('tunnel-url-input');
+    const publicCopyBtn = document.getElementById('copyPublicUrlBtn');
+    const publicMsg = document.getElementById('copyPublicMsg');
+    if (publicCopyBtn && publicInput) {
+      publicCopyBtn.addEventListener('click', () => {
+        copyToClipboard(publicInput.value, publicMsg);
+      });
+    }
+
+    const lanInput = document.getElementById('lan-url-input');
+    const lanCopyBtn = document.getElementById('copyLanUrlBtn');
+    const lanMsg = document.getElementById('copyLanMsg');
+    if (lanCopyBtn && lanInput) {
+      lanCopyBtn.addEventListener('click', () => {
+        copyToClipboard(lanInput.value, lanMsg);
+      });
+    }
+
+    const qrImage = document.getElementById('shareQrImage');
+    const qrStatus = document.getElementById('shareQrStatus');
+    const refreshQrBtn = document.getElementById('refreshQrBtn');
+    const qrEndpoint = "{{ url_for('developer_share_qr') }}";
+
+    function sanitizeUrl(raw) {
+      let value = (raw || '').trim();
+      if (!value) return '';
+      if (!/^https?:\/\//i.test(value)) value = 'https://' + value;
+      return value.replace(/\/+$/, '');
+    }
+
+    function renderShareQr(url) {
+      const resolved = sanitizeUrl(url);
+      if (!qrImage) return false;
+      if (!resolved) {
+        if (qrStatus) qrStatus.textContent = 'Waiting for a public link...';
+        qrImage.removeAttribute('src');
+        return false;
+      }
+      if (qrStatus) qrStatus.textContent = 'Generating QR...';
+      qrImage.onload = () => {
+        if (qrStatus) qrStatus.textContent = 'QR code is ready';
+      };
+      qrImage.onerror = () => {
+        if (qrStatus) qrStatus.textContent = 'QR generation failed';
+      };
+      qrImage.src = `${qrEndpoint}?format=png&url=${encodeURIComponent(resolved)}&ts=${Date.now()}`;
+      return true;
+    }
+
+    function updateShareUrl(newUrl) {
+      const resolved = sanitizeUrl(newUrl);
+      if (!resolved || !tunnelInput) return;
+      if (resolved !== tunnelInput.value.trim()) {
+        tunnelInput.value = resolved;
+      }
+      const openLink = document.getElementById('open-in-browser-link');
+      if (openLink) openLink.href = resolved;
+      renderShareQr(resolved);
+      const msg = document.getElementById('copyPublicMsg');
+      if (msg) {
+        const originalText = msg.textContent;
+        msg.textContent = 'URL updated!';
+        msg.style.display = 'inline';
+        setTimeout(() => {
+          msg.textContent = originalText;
+          msg.style.display = 'none';
+        }, 2000);
+      }
+    }
+
+    // Auto‑refresh public URL via API polling (if the input exists)
+    const tunnelInput = document.getElementById('tunnel-url-input');
+    if (tunnelInput) {
+      let pollingInterval = null;
+      function pollLiveUrl() {
+        fetch('/api/live-share-url', { credentials: 'same-origin' })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.login_url) {
+              updateShareUrl(data.login_url);
+            }
+          })
+          .catch(() => { /* ignore network errors */ });
+      }
+      if (refreshQrBtn) {
+        refreshQrBtn.addEventListener('click', () => {
+          renderShareQr(tunnelInput.value);
+        });
+      }
+      renderShareQr(tunnelInput.value);
+      pollLiveUrl();
+      pollingInterval = setInterval(pollLiveUrl, 30000);
+      window.addEventListener('beforeunload', () => {
+        if (pollingInterval) clearInterval(pollingInterval);
+      });
+    } else {
+      // If no public URL input, reload page every 5 seconds until it appears
+      const reloadInterval = setInterval(() => {
+        if (document.getElementById('tunnel-url-input')) {
+          clearInterval(reloadInterval);
+          window.location.reload();
+        }
+      }, 5001);
+    }
+  })();
+</script>
+
+{# Optional additional styles to match app design (already covered by layout.css) #}
+<style>
+  .share-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .share-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+  }
+  .share-qr-shell {
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(248, 250, 252, 0.92);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+  .share-qr-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+  .share-qr-image {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+  }
+  .share-qr-meta {
+    min-width: 220px;
+    color: #1f2937;
+    font-weight: 600;
+  }
+  body[data-theme="dark"] .share-qr-shell {
+    background: rgba(8, 12, 20, 0.98) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  body[data-theme="dark"] .share-qr-card {
+    background: #000000 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+  body[data-theme="dark"] .share-qr-meta {
+    color: #f8fbff !important;
+  }
+  .font-monospace {
+    font-family: 'SF Mono', 'Consolas', monospace;
+  }
+  @media (max-width: 576px) {
+    .share-card .btn {
+      white-space: nowrap;
+    }
+  }
+</style>
+{% endblock %}

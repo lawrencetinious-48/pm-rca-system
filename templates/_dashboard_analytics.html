@@ -1,0 +1,504 @@
+<section class="mt-4 mb-4">
+  <div class="feature-group-title mb-3">
+    <i class="bi bi-bar-chart-fill me-2"></i>Analytics & Statistics
+    <span class="badge bg-success ms-2" id="liveUpdateBadge" style="font-size: 0.75rem; animation: pulse 2s infinite;">
+      <i class="bi bi-circle-fill me-1" style="animation: blink 1s infinite;"></i>Live
+    </span>
+  </div>
+
+  <div id="analyticsInsight" class="mb-3 small text-muted" style="padding: 12px; background: rgba(74,158,255,0.05); border-radius: 6px; border-left: 4px solid #0a84ff; animation: slideIn 0.5s ease-out;">
+    <i class="bi bi-lightbulb me-2"></i><span id="insightText">Loading insights...</span>
+  </div>
+
+  {# Summary Stats #}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
+    <div class="col" style="animation: slideUp 0.5s ease-out;">
+      <div class="card stats-card h-100 position-relative" data-href="{{ url_for('desk_activities', mode='forms') }}" style="cursor: pointer; transition: all 0.3s;">
+        <div class="card-body text-center">
+          <div class="stats-icon mx-auto mb-2"><i class="bi bi-graph-up-arrow"></i></div>
+          <h1 class="display-5 fw-bold" id="analyticsTotalSubmitted">0</h1>
+          <p class="text-muted mb-0">Total Submitted</p>
+          <small class="text-muted d-block mt-2" id="submittedTrend">PM/RCA/Consumables</small>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="animation: slideUp 0.5s ease-out 0.1s backwards;">
+      <div class="card stats-card h-100 position-relative" data-href="{{ url_for('desk_activities') }}?mode=forms&review=approved" style="cursor: pointer; transition: all 0.3s;">
+        <div class="card-body text-center">
+          <div class="stats-icon mx-auto mb-2"><i class="bi bi-check-circle"></i></div>
+          <h1 class="display-5 fw-bold" id="analyticsTotalApproved">0</h1>
+          <p class="text-muted mb-0">Total Approved</p>
+          <small class="text-muted d-block mt-2" id="approvalRate">Computing rate...</small>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="animation: slideUp 0.5s ease-out 0.2s backwards;">
+      <div class="card stats-card h-100 position-relative" data-href="{{ url_for('desk_activities', mode='rejected') }}" style="cursor: pointer; transition: all 0.3s;">
+        <div class="card-body text-center">
+          <div class="stats-icon mx-auto mb-2"><i class="bi bi-x-circle"></i></div>
+          <h1 class="display-5 fw-bold" id="analyticsTotalRejected">0</h1>
+          <p class="text-muted mb-0">Total Rejected</p>
+          <small class="text-muted d-block mt-2" id="rejectionRate">Computing rate...</small>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="animation: slideUp 0.5s ease-out 0.3s backwards;">
+      <div class="card stats-card h-100 position-relative" data-href="{{ url_for('desk_activities', mode='rcas') }}" style="cursor: pointer; transition: all 0.3s;">
+        <div class="card-body text-center">
+          <div class="stats-icon mx-auto mb-2"><i class="bi bi-hourglass-split"></i></div>
+          <h1 class="display-5 fw-bold" id="analyticsTotalPending">0</h1>
+          <p class="text-muted mb-0">Pending Review</p>
+          <small class="text-muted d-block mt-2" id="avgReviewTime">Avg review time</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Graphs Card Container #}
+  <div class="card p-4 shadow-sm" style="border-top: 4px solid #0a84ff; animation: slideUp 0.5s ease-out 0.4s backwards;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h5 class="mb-2"><i class="bi bi-graph-up me-2"></i>Form Analytics Dashboard</h5>
+        <small class="text-muted">Real-time tracking of PM, RCA, and Consumable submissions across months and days.</small>
+      </div>
+      <div class="d-flex gap-2">
+        <select class="form-select form-select-sm" id="graphTimeRangeSelect" style="width: auto;">
+          <option value="30">Last 30 Days</option>
+          <option value="60">Last 60 Days</option>
+          <option value="90">Last 90 Days</option>
+          <option value="365">Last Year</option>
+        </select>
+        <button class="btn btn-outline-secondary btn-sm" id="refreshGraphsBtn" title="Refresh graphs">
+          <i class="bi bi-arrow-repeat"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="row gy-3">
+      {# Bar Chart: Form Status by Type #}
+      <div class="col-12 col-lg-6">
+        <div class="dashboard-chart-panel" style="background: rgba(74,158,255,0.03); padding: 14px; border-radius: 8px; border: 1px solid rgba(74,158,255,0.1);">
+          <h6 class="mb-3">Form Status by Type</h6>
+          <canvas id="dashboardFormsBar" height="120" style="animation: fadeIn 0.6s ease-out 0.5s backwards;"></canvas>
+          <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>Shows submitted, approved, and rejected counts for each form type.</small>
+        </div>
+      </div>
+
+      {# Pie Chart: Form Volume Distribution #}
+      <div class="col-12 col-lg-6">
+        <div class="dashboard-chart-panel" style="background: rgba(94,92,230,0.03); padding: 14px; border-radius: 8px; border: 1px solid rgba(94,92,230,0.1);">
+          <h6 class="mb-3">Form Volume Distribution</h6>
+          <canvas id="dashboardFormsPie" height="120" style="animation: fadeIn 0.6s ease-out 0.6s backwards;"></canvas>
+          <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>Proportion of work across PM, RCA, and Consumables.</small>
+        </div>
+      </div>
+
+      {# Line Chart: Submission Trend #}
+      <div class="col-12">
+        <div class="dashboard-chart-panel" style="background: rgba(76,175,80,0.03); padding: 14px; border-radius: 8px; border: 1px solid rgba(76,175,80,0.1);">
+          <h6 class="mb-3">Submission & Approval Trend</h6>
+          <canvas id="dashboardSlaTrend" height="100" style="animation: fadeIn 0.6s ease-out 0.7s backwards;"></canvas>
+          <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>Daily submission and approval history with smart day/month detection.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# SLA & Performance Metrics #}
+  <div class="card p-4 shadow-sm mt-4" style="border-top: 4px solid #4caf50; animation: slideUp 0.5s ease-out 0.5s backwards;">
+    <h5 class="mb-3"><i class="bi bi-shield-check me-2"></i>SLA & Performance Metrics</h5>
+    <div class="row g-3">
+      <div class="col-12 col-md-3">
+        <div style="background: var(--bs-gray-50); padding: 16px; border-radius: 8px;">
+          <div class="text-muted small mb-2">On-Time Approval</div>
+          <div class="display-6 fw-bold" id="onTimeApprovalRate">0%</div>
+          <small class="text-success"><i class="bi bi-arrow-up me-1"></i>Forms approved within SLA</small>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div style="background: var(--bs-gray-50); padding: 16px; border-radius: 8px;">
+          <div class="text-muted small mb-2">Avg Review Time</div>
+          <div class="display-6 fw-bold" id="avgReviewHours">0h</div>
+          <small class="text-info"><i class="bi bi-clock me-1"></i>Average hours to review</small>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div style="background: var(--bs-gray-50); padding: 16px; border-radius: 8px;">
+          <div class="text-muted small mb-2">First-Time Pass Rate</div>
+          <div class="display-6 fw-bold" id="firstTimePassRate">0%</div>
+          <small class="text-primary"><i class="bi bi-target me-1"></i>Forms approved on first submission</small>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div style="background: var(--bs-gray-50); padding: 16px; border-radius: 8px;">
+          <div class="text-muted small mb-2">Breach Rate</div>
+          <div class="display-6 fw-bold" id="slaBreachRate">0%</div>
+          <small class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Forms exceeding SLA</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .stats-card:active {
+    transform: scale(0.98);
+  }
+
+  .dashboard-chart-panel {
+    min-height: 180px;
+    max-height: 220px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-chart-panel canvas {
+    width: 100% !important;
+    flex: 1 1 auto;
+    min-height: 100px;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (function() {
+    const badge = document.getElementById('liveUpdateBadge');
+
+    function makeStatCardsClickable() {
+      document.querySelectorAll('.stats-card[data-href]').forEach(function(card) {
+        const href = card.getAttribute('data-href');
+        if (!href) return;
+
+        card.style.cursor = 'pointer';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `Open ${card.textContent.replace(/\s+/g, ' ').trim()}`);
+
+        const navigate = function() {
+          window.location = href;
+        };
+
+        card.addEventListener('click', function(e) {
+          if (e.target.closest('a') || e.target.closest('button')) return;
+          navigate();
+        });
+
+        card.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            navigate();
+          }
+        });
+      });
+    }
+
+    function safeNumber(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function safeArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function formatHours(value) {
+      const hours = safeNumber(value);
+      return hours === 0 ? '0h' : `${hours.toFixed(1)}h`;
+    }
+
+    function setDashboardFallbackState(message) {
+      document.getElementById('analyticsTotalSubmitted').textContent = '0';
+      document.getElementById('analyticsTotalApproved').textContent = '0';
+      document.getElementById('analyticsTotalRejected').textContent = '0';
+      document.getElementById('analyticsTotalPending').textContent = '0';
+      document.getElementById('approvalRate').textContent = '0% approval rate';
+      document.getElementById('rejectionRate').textContent = '0% rejection rate';
+      document.getElementById('onTimeApprovalRate').textContent = '0%';
+      document.getElementById('slaBreachRate').textContent = '100%';
+      document.getElementById('firstTimePassRate').textContent = '0%';
+      document.getElementById('avgReviewHours').textContent = '0h';
+      document.getElementById('submittedTrend').textContent = 'Analytics unavailable';
+      document.getElementById('insightText').textContent = message;
+
+      if (badge) {
+        badge.innerHTML = '<i class="bi bi-circle-fill me-1" style="animation: blink 1s infinite;"></i>Live';
+      }
+    }
+
+    function setSummaryValues(stats) {
+      const totalSubmitted = safeNumber(stats.total_submitted);
+      const totalApproved = safeNumber(stats.total_approved);
+      const totalRejected = safeNumber(stats.total_rejected);
+      const pendingReview = Math.max(0, totalSubmitted - totalApproved - totalRejected);
+
+      document.getElementById('analyticsTotalSubmitted').textContent = totalSubmitted;
+      document.getElementById('analyticsTotalApproved').textContent = totalApproved;
+      document.getElementById('analyticsTotalRejected').textContent = totalRejected;
+      document.getElementById('analyticsTotalPending').textContent = pendingReview;
+
+      const approvalRate = totalSubmitted > 0 ? Math.round((totalApproved / totalSubmitted) * 100) : 0;
+      const rejectionRate = totalSubmitted > 0 ? Math.round((totalRejected / totalSubmitted) * 100) : 0;
+
+      document.getElementById('approvalRate').textContent = approvalRate + '% approval rate';
+      document.getElementById('rejectionRate').textContent = rejectionRate + '% rejection rate';
+      document.getElementById('onTimeApprovalRate').textContent = `${safeNumber(stats.on_time_rate)}%`;
+      document.getElementById('slaBreachRate').textContent = `${Math.max(0, 100 - safeNumber(stats.on_time_rate))}%`;
+      document.getElementById('firstTimePassRate').textContent = `${safeNumber(stats.first_time_pass_rate)}%`;
+      document.getElementById('avgReviewHours').textContent = formatHours(stats.avg_review_hours);
+      document.getElementById('submittedTrend').textContent = `${totalSubmitted} forms tracked in the last refresh`;
+
+      if (badge) {
+        badge.innerHTML = '<i class="bi bi-circle-fill me-1" style="animation: blink 1s infinite;"></i>Live';
+      }
+    }
+
+    function updateInsight(stats, summaryInsight) {
+      const total = safeNumber(stats.total_submitted);
+      const pendingReview = Math.max(0, total - safeNumber(stats.total_approved) - safeNumber(stats.total_rejected));
+      const onTimeRate = safeNumber(stats.on_time_rate);
+
+      let insight = summaryInsight || '';
+      if (!insight) {
+        if (total === 0) {
+          insight = 'No submissions yet. Start submitting PM, RCA, or Consumable forms.';
+        } else if (pendingReview > 0) {
+          insight = `📋 ${pendingReview} form${pendingReview === 1 ? '' : 's'} awaiting review. Average review time: ${formatHours(stats.avg_review_hours)}.`;
+        } else if (onTimeRate >= 90) {
+          insight = '✨ Excellent SLA performance! Keep up the great work.';
+        } else {
+          insight = `⚠️ SLA performance at ${onTimeRate}%. Focus on pending items and fast approvals.`;
+        }
+      }
+
+      document.getElementById('insightText').textContent = insight;
+    }
+
+    function renderDashboardFormsCharts(stats) {
+      const submitted = [safeNumber(stats.pm.total), safeNumber(stats.rca.total), safeNumber(stats.consumables.total)];
+      const approved = [safeNumber(stats.pm.approved), safeNumber(stats.rca.approved), safeNumber(stats.consumables.approved)];
+      const rejected = [safeNumber(stats.pm.rejected), safeNumber(stats.rca.rejected), safeNumber(stats.consumables.rejected)];
+
+      const barCtx = document.getElementById('dashboardFormsBar')?.getContext('2d');
+      if (barCtx && !window.dashboardFormsBarChart) {
+        window.dashboardFormsBarChart = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: ['PM', 'RCA', 'Consumables'],
+            datasets: [
+              { label: 'Submitted', data: submitted, backgroundColor: '#4a9eff', borderRadius: 4 },
+              { label: 'Approved', data: approved, backgroundColor: '#4caf50', borderRadius: 4 },
+              { label: 'Rejected', data: rejected, backgroundColor: '#ff7043', borderRadius: 4 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 1.5,
+            animation: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+            scales: { y: { beginAtZero: true, grid: { drawBorder: false } } }
+          }
+        });
+      } else if (window.dashboardFormsBarChart) {
+        window.dashboardFormsBarChart.data.datasets[0].data = submitted;
+        window.dashboardFormsBarChart.data.datasets[1].data = approved;
+        window.dashboardFormsBarChart.data.datasets[2].data = rejected;
+        window.dashboardFormsBarChart.update();
+      }
+
+      const pieCtx = document.getElementById('dashboardFormsPie')?.getContext('2d');
+      if (pieCtx && !window.dashboardFormsPieChart) {
+        window.dashboardFormsPieChart = new Chart(pieCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['PM', 'RCA', 'Consumables'],
+            datasets: [{
+              data: submitted,
+              backgroundColor: ['#4a9eff', '#5e5ce6', '#ff9800'],
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 1.2,
+            animation: false,
+            plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } }
+          }
+        });
+      } else if (window.dashboardFormsPieChart) {
+        window.dashboardFormsPieChart.data.datasets[0].data = submitted;
+        window.dashboardFormsPieChart.update();
+      }
+    }
+
+    const graphTimeRangeSelect = document.getElementById('graphTimeRangeSelect');
+
+    function renderDashboardTrendChart(trendData) {
+      const trendCtx = document.getElementById('dashboardSlaTrend')?.getContext('2d');
+      if (!trendCtx) return;
+
+      const rawTrend = safeArray(trendData);
+      const labels = rawTrend.map((item) => {
+        const date = new Date(item.day);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      });
+
+      if (!window.dashboardSlaTrendChart) {
+        window.dashboardSlaTrendChart = new Chart(trendCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Submitted',
+                data: rawTrend.map(value => safeNumber(value.submitted)),
+                borderColor: '#4a9eff',
+                backgroundColor: 'rgba(74, 158, 255, 0.12)',
+                borderWidth: 2,
+                tension: 0.35,
+                fill: true,
+                pointRadius: 3
+              },
+              {
+                label: 'Pending',
+                data: rawTrend.map(value => safeNumber(value.pending)),
+                borderColor: '#ff9800',
+                backgroundColor: 'rgba(255, 152, 0, 0.08)',
+                borderWidth: 2,
+                tension: 0.35,
+                fill: true,
+                pointRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 2.5,
+            animation: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+            scales: { y: { beginAtZero: true, grid: { drawBorder: false } }, x: { grid: { display: false } } }
+          }
+        });
+      } else {
+        window.dashboardSlaTrendChart.data.labels = labels;
+        window.dashboardSlaTrendChart.data.datasets[0].data = rawTrend.map(value => safeNumber(value.submitted));
+        window.dashboardSlaTrendChart.data.datasets[1].data = rawTrend.map(value => safeNumber(value.pending));
+        window.dashboardSlaTrendChart.update();
+      }
+    }
+
+    async function refreshDashboardAnalytics(rangeDays = 30) {
+      try {
+        const [statsResult, trendResult, summaryResult] = await Promise.allSettled([
+          fetch('{{ url_for("api_dashboard_stats") }}', { headers: { Accept: 'application/json' } }),
+          fetch('{{ url_for("api_dashboard_sla_trends") }}?days=' + encodeURIComponent(rangeDays), { headers: { Accept: 'application/json' } }),
+          fetch('{{ url_for("api_dashboard_summary") }}', { headers: { Accept: 'application/json' } })
+        ]);
+
+        const statsResponse = statsResult.status === 'fulfilled' ? statsResult.value : null;
+        const trendResponse = trendResult.status === 'fulfilled' ? trendResult.value : null;
+        const summaryResponse = summaryResult.status === 'fulfilled' ? summaryResult.value : null;
+
+        if (!statsResponse || !statsResponse.ok) {
+          setDashboardFallbackState('Analytics are temporarily unavailable. Refresh the page to retry.');
+          return;
+        }
+
+        const stats = await statsResponse.json();
+        const trends = trendResponse && trendResponse.ok ? await trendResponse.json() : null;
+        const summary = summaryResponse && summaryResponse.ok ? await summaryResponse.json() : null;
+
+        if (!stats || stats.status !== 'ok') {
+          setDashboardFallbackState('Analytics response was not recognized. Please try again.');
+          return;
+        }
+
+        const summaryInsight = summary && summary.status === 'ok' && Array.isArray(summary.insights) ? summary.insights[0] : '';
+        stats.total_submitted = safeNumber(stats.total_submitted ?? (safeNumber(stats.pm.total) + safeNumber(stats.rca.total) + safeNumber(stats.consumables.total)));
+        stats.total_approved = safeNumber(stats.total_approved ?? (safeNumber(stats.pm.approved) + safeNumber(stats.rca.approved) + safeNumber(stats.consumables.approved)));
+        stats.total_rejected = safeNumber(stats.total_rejected ?? (safeNumber(stats.pm.rejected) + safeNumber(stats.rca.rejected) + safeNumber(stats.consumables.rejected)));
+        stats.on_time_rate = safeNumber(stats.on_time_rate ?? (stats.total_submitted > 0 ? Math.max(0, Math.min(100, Math.round((stats.total_approved / stats.total_submitted) * 100))) : 0));
+        stats.first_time_pass_rate = safeNumber(stats.first_time_pass_rate ?? stats.on_time_rate);
+        stats.avg_review_hours = safeNumber(stats.avg_review_hours ?? 0);
+
+        setSummaryValues(stats);
+        renderDashboardFormsCharts(stats);
+        renderDashboardTrendChart(trends && trends.status === 'ok' ? trends.days.map((day, index) => ({
+          day,
+          submitted: safeNumber(trends.submissions[index]),
+          pending: safeNumber(trends.pendings[index])
+        })) : []);
+        updateInsight(stats, summaryInsight);
+        window.dashboardPrioritization = stats.prioritization || {};
+        document.dispatchEvent(new CustomEvent('dashboardStatsUpdated', { detail: stats }));
+      } catch (error) {
+        console.error('Failed to refresh analytics:', error);
+        setDashboardFallbackState('Analytics could not refresh. Please try again shortly.');
+      }
+    }
+
+    makeStatCardsClickable();
+    refreshDashboardAnalytics(Number(graphTimeRangeSelect?.value || 30));
+    document.getElementById('refreshGraphsBtn')?.addEventListener('click', function() {
+      refreshDashboardAnalytics(Number(graphTimeRangeSelect?.value || 30));
+    });
+    graphTimeRangeSelect?.addEventListener('change', function() {
+      refreshDashboardAnalytics(Number(graphTimeRangeSelect.value || 30));
+    });
+    setInterval(function() {
+      refreshDashboardAnalytics(Number(graphTimeRangeSelect?.value || 30));
+    }, 30000);
+    window.addEventListener('pm-form-submitted', refreshDashboardAnalytics);
+    window.addEventListener('pm-form-approved', refreshDashboardAnalytics);
+    window.addEventListener('pm-form-rejected', refreshDashboardAnalytics);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        refreshDashboardAnalytics();
+      }
+    });
+  })();
+</script>

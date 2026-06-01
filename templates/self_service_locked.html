@@ -1,0 +1,79 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="login-page">
+   <nav class="login-role-menu" aria-label="Login menu">
+      <a href="{{ url_for('login') }}" class="{% if not preselected_role %}is-active{% endif %}">
+       <i class="bi bi-grid"></i><span>All</span>
+     </a>
+     <a href="{{ url_for('admin_login') }}" class="{% if preselected_role in ['developer', 'admin'] %}is-active{% endif %}">
+       <i class="bi bi-shield-lock-fill"></i><span>Admin</span>
+     </a>
+     <a href="{{ url_for('staff_login') }}" class="{% if preselected_role == 'staff' %}is-active{% endif %}">
+       <i class="bi bi-person-workspace"></i><span>Staff</span>
+     </a>
+     <a href="{{ url_for('technician_login') }}" class="{% if preselected_role == 'technician' %}is-active{% endif %}">
+       <i class="bi bi-wrench-adjustable-circle"></i><span>Technician</span>
+     </a>
+       <a href="{{ url_for('manager_login') }}" class="{% if preselected_role == 'manager' %}is-active{% endif %}">
+       <i class="bi bi-briefcase-fill"></i><span>Manager</span>
+     </a>
+     <a href="{{ url_for('general_manager_login') }}" class="{% if preselected_role == 'general_manager' %}is-active{% endif %}">
+       <i class="bi bi-clipboard2-check-fill"></i><span>Gen Manager</span>
+     </a>
+   </nav>
+
+  <div class="login-card shadow-sm px-4 py-4">
+
+    <!-- LOCKED ICON -->
+    <div class="text-center mb-4">
+      <div class="locked-icon mx-auto mb-3">
+        <i class="bi bi-lock-fill text-danger"></i>
+      </div>
+      <h1 class="text-danger">Admin Account Exists</h1>
+      <p class="text-muted">An admin account has already been created for this system</p>
+    </div>
+
+    <!-- INFO BOX -->
+    <div class="alert alert-warning">
+      <h5><i class="bi bi-exclamation-triangle"></i> Account Already Created</h5>
+      <p class="mb-2">
+        This system has already been set up with an admin account. 
+        Only one admin can exist per installation for security reasons.
+      </p>
+      <hr>
+      <p class="mb-0">
+        <strong>If you need access:</strong><br>
+        - Contact your system administrator<br>
+        - Use the "Admin" login option below
+      </p>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+     <div class="d-grid gap-2">
+       <a href="{{ url_for('admin_login') }}" class="btn btn-primary">
+         <i class="bi bi-box-arrow-in-right"></i> Login as System Admin
+       </a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-secondary">
+         <i class="bi bi-arrow-left"></i> Back to Login
+       </a>
+     </div>
+
+  </div>
+</section>
+
+<style>
+.locked-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+</style>
+
+{% endblock %}

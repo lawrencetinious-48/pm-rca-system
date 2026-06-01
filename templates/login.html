@@ -1,0 +1,149 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<section class="login-page">
+   <div class="login-card shadow-sm px-4 py-4">
+     <div class="login-brand text-center mb-3">
+       <div class="d-flex justify-content-center align-items-center mb-3">
+         <img src="{{ url_for('static', filename='images/soliton-telmec.jpeg') }}" alt="Soliton Telmec" style="max-height:64px;">
+       </div>
+       <h1 class="mt-3">Welcome Back</h1>
+       <p class="text-muted">Sign in to continue</p>
+     </div>
+
+     <nav class="login-role-selector" aria-label="Login role selector">
+         <a href="{{ safe_url('login') }}" data-no-loader class="{% if not preselected_role %}is-active{% endif %}">All</a>
+       <a href="{{ safe_url('admin_login') }}" data-no-loader class="{% if preselected_role in ['developer', 'admin'] %}is-active{% endif %}">Admin</a>
+       <a href="{{ safe_url('staff_login') }}" data-no-loader class="{% if preselected_role == 'staff' %}is-active{% endif %}">Staff</a>
+       <a href="{{ safe_url('technician_login') }}" data-no-loader class="{% if preselected_role == 'technician' %}is-active{% endif %}">Technician</a>
+       <a href="{{ safe_url('manager_login') }}" data-no-loader class="{% if preselected_role == 'manager' %}is-active{% endif %}">Manager</a>
+       <a href="{{ safe_url('general_manager_login') }}" data-no-loader class="{% if preselected_role == 'general_manager' %}is-active{% endif %}">Gen Manager</a>
+     </nav>
+
+     {% with messages = get_flashed_messages(with_categories=true) %}
+       {% if messages %}
+         {% for category, msg in messages %}
+           <div class="alert alert-{{ category }} alert-dismissible fade show">
+             {{ msg }}
+             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+           </div>
+         {% endfor %}
+       {% endif %}
+     {% endwith %}
+
+     <div id="rolePillRow" class="mb-3">
+       <div class="dropdown" id="rolePillDropdown">
+         <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="rolePillDropdownToggle" data-bs-toggle="dropdown" aria-expanded="false">
+           {{ preselected_role.replace('_', ' ').title() if preselected_role else 'Select account type' }}
+         </button>
+         <ul class="dropdown-menu w-100" aria-labelledby="rolePillDropdownToggle">
+           <li><a class="dropdown-item" href="{{ safe_url('admin_login') }}" data-no-loader>Admin</a></li>
+           <li><a class="dropdown-item" href="{{ safe_url('staff_login') }}" data-no-loader>Staff</a></li>
+           <li><a class="dropdown-item" href="{{ safe_url('technician_login') }}" data-no-loader>Technician</a></li>
+           <li><a class="dropdown-item" href="{{ safe_url('manager_login') }}" data-no-loader>Manager</a></li>
+           <li><a class="dropdown-item" href="{{ safe_url('general_manager_login') }}" data-no-loader>Gen Manager</a></li>
+         </ul>
+       </div>
+       <select class="form-select" id="accountType" name="accountType" onchange="document.querySelector('input[name=account_type]').value = this.value" style="display:none;">
+         <option value="">-- Select account type --</option>
+         <option value="developer">Admin</option>
+         <option value="staff">Staff</option>
+         <option value="technician">Technician</option>
+         <option value="manager">Manager</option>
+         <option value="general_manager">Gen Manager</option>
+       </select>
+     </div>
+
+        <form method="POST"
+               action="{{ safe_url('login', role=preselected_role) if preselected_role else safe_url('login') }}"
+               novalidate
+               class="mt-3">
+
+       <input type="hidden" name="account_type" value="{{ preselected_role or '' }}">
+       <input type="hidden" name="login_csrf_token" value="{{ login_csrf_token }}">
+       <input type="hidden" name="role" value="{{ preselected_role or '' }}">
+       <input type="hidden" name="next" value="{{ next_url or request.args.get('next') or '' }}">
+
+       <div class="mb-3">
+         <label class="form-label">Email address</label>
+         <input type="email" class="form-control" name="email" required autocomplete="email" placeholder="your@email.com">
+       </div>
+
+       <div class="mb-3 position-relative">
+         <label class="form-label">Password</label>
+         <input type="password" class="form-control" id="password" name="password" required placeholder="Enter your password">
+         <i class="bi bi-eye-slash position-absolute"
+            id="togglePassword"
+            style="top:2.5rem;right:12px;cursor:pointer;"></i>
+       </div>
+
+       {% if preselected_role %}
+       <div class="mb-3">
+         <div class="text-muted small">
+           <i class="bi bi-lock-fill me-1"></i>
+           Logging in as <strong>{% if preselected_role == 'developer' %}Admin{% elif preselected_role == 'admin' %}System Admin{% else %}{{ preselected_role.replace('_', ' ').title() }}{% endif %}</strong>
+         </div>
+       </div>
+       {% endif %}
+
+       <button class="btn btn-primary w-100 mt-2" type="submit">Login</button>
+     </form>
+
+     {% if show_first_time_setup %}
+     <div class="mt-4 alert alert-success small">
+       <strong>First time setup?</strong>
+       <a href="{{ safe_url('self_service_create_developer') }}" class="alert-link">Create the first admin account</a>.
+     </div>
+     {% endif %}
+   </div>
+ </section>
+
+ <script>
+   const password = document.getElementById("password");
+   const eye = document.getElementById("togglePassword");
+
+   if (eye && password) {
+     eye.addEventListener("click", () => {
+       password.type = password.type === "password" ? "text" : "password";
+       eye.classList.toggle("bi-eye");
+       eye.classList.toggle("bi-eye-slash");
+     });
+   }
+
+   // Form submission validation
+   const loginForm = document.querySelector('form[method="POST"]');
+   if (loginForm) {
+     loginForm.addEventListener('submit', (e) => {
+       const email = document.querySelector('input[name="email"]');
+       const password = document.querySelector('input[name="password"]');
+       
+       // Validate email
+       if (!email.value.trim()) {
+         email.classList.add('is-invalid');
+         e.preventDefault();
+         return false;
+       }
+       
+       // Validate password
+       if (!password.value) {
+         password.classList.add('is-invalid');
+         e.preventDefault();
+         return false;
+       }
+       
+       // Remove error states if validation passes
+       email.classList.remove('is-invalid');
+       password.classList.remove('is-invalid');
+     });
+
+     // Remove error state on input
+     const inputs = loginForm.querySelectorAll('input[name="email"], input[name="password"]');
+     inputs.forEach(input => {
+       input.addEventListener('input', () => {
+         input.classList.remove('is-invalid');
+       });
+     });
+   }
+ </script>
+
+{% endblock %}

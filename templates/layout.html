@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="{{ app_language|default('en') }}" dir="{{ app_language_direction|default('ltr') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Preventative Maintenance RCA System</title>
+
+    <meta property="og:title" content="Preventative Maintenance RCA System">
+    <meta property="og:description" content="Secure PM and RCA portal with role-based access.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/soliton-telmec.jpeg') }}" type="image/jpeg">
+    <style>
+        /* site version footer and glassy elements */
+        .app-version {
+            position: fixed;
+            right: 12px;
+            bottom: 12px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(6px) saturate(120%);
+            color: rgba(255,255,255,0.85);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 6px 18px rgba(6,15,35,0.2);
+            border: 1px solid rgba(255,255,255,0.06);
+            z-index: 9999;
+        }
+        .app-version small {opacity:0.9}
+    </style>
+</head>
+
+{% set role_current = ((current_role if current_role is defined and current_role else (current_user.role if current_user.is_authenticated else '')) | lower | replace(' ', '_') | replace('-', '_')) %}
+<body data-theme="{{ app_theme }}" class="role-{{ role_current }}{% if request.endpoint == 'login' %} login-shell{% endif %}">
+
+<!-- ================= GLOBAL LOADER ================= -->
+<div id="appLoader" class="app-loader">
+    <div class="app-loader-card">
+
+        <svg class="loader-infinity" viewBox="0 0 160 80" aria-hidden="true">
+            <defs>
+                <linearGradient id="loaderInfinityGradient" x1="20" y1="40" x2="140" y2="40">
+                    <stop offset="0%" stop-color="#74c6ff"/>
+                    <stop offset="55%" stop-color="#0a84ff"/>
+                    <stop offset="100%" stop-color="#5e5ce6"/>
+                </linearGradient>
+            </defs>
+
+            <path class="loader-infinity-snake"
+                  d="M20 40C20 25.64 31.64 14 46 14C62.5 14 72.5 31 80 40C87.5 49 97.5 66 114 66C128.36 66 140 54.36 140 40C140 25.64 128.36 14 114 14C97.5 14 87.5 31 80 40C72.5 49 62.5 66 46 66C31.64 66 20 54.36 20 40Z"/>
+        </svg>
+
+        <p id="appLoaderText" class="loader-text mb-0">
+            Loading <span class="loader-dots"><span></span><span></span><span></span></span>
+        </p>
+
+    </div>
+</div>
+
+<!-- ================= NAVBAR ================= -->
+{% if current_user.is_authenticated %}
+<nav class="navbar navbar-light bg-white border-bottom shadow-sm py-3 app-topbar">
+    <div class="container-fluid justify-content-between align-items-center">
+
+        <button type="button" class="btn btn-link p-0"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#offcanvasMenu"
+                aria-controls="offcanvasMenu"
+                aria-expanded="false"
+                aria-label="Open menu">
+            <span class="menu-toggle-lines"><span></span><span></span><span></span></span>
+        </button>
+
+        {% if request.endpoint == 'dashboard' %}
+        {% endif %}
+
+        <div class="role-notification-wrap">
+
+            <a href="{{ url_for('notifications') }}" class="notification-bell text-decoration-none {% if notification_count %}has-unread{% endif %}">
+                <i class="bi bi-bell"></i>
+                {% if notification_count %}<span>{{ notification_count }}</span>{% endif %}
+            </a>
+            {% set role_label_map = {'developer':'Admin','general_manager':'General Manager','manager':'Manager','technician':'Technician','staff':'Staff','desk_staff':'Staff'} %}
+            <span class="active-role-pill">{{ role_label_map.get(current_user.role, current_user.role|replace('_', ' ')|title) }}</span>
+        </div>
+
+    </div>
+</nav>
+{% endif %}
+
+<!-- ================= OFFCANVAS ================= -->
+{% if current_user.is_authenticated %}
+<div class="offcanvas offcanvas-start" id="offcanvasMenu">
+    <div class="offcanvas-header">
+        <div class="menu-brand align-items-center">
+            <img src="{{ url_for('static', filename='images/soliton-telmec.jpeg') }}" alt="Soliton Telmec" class="menu-brand-logo">
+            <div class="d-flex align-items-center gap-2">
+                <div class="avatar-initials" aria-hidden="true">{{ (current_user.display_name or current_user.email)[:1]|upper }}</div>
+                <div>
+                    <small>Signed in as</small>
+                    <h5 class="mb-0">{{ current_user.display_name or current_user.email }}</h5>
+                    <div class="small text-muted">{{ current_user.email }}</div>
+                </div>
+            </div>
+        </div>
+        <button class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        {% set menu_icons = {
+            'dashboard': 'speedometer2',
+            'admin_user_control': 'person-lock',
+            'admin_security_posture': 'shield-check',
+            'admin_photo_library': 'images',
+            'system_share_url': 'qr-code',
+            'consumables': 'box-seam',
+            'notifications': 'bell',
+            'settings_page': 'gear',
+            'desk_activities': 'clipboard-check',
+            'admin_staff': 'people',
+            'field_rca': 'wrench-adjustable-circle',
+            'technician_submissions': 'journal-check',
+            'technician_rejected_reports': 'x-octagon',
+            'technician_calendar': 'calendar-week'
+        } %}
+        <ul class="menu-list list-unstyled mb-0">
+            {% for item in dashboard_menu %}
+                {% if item.endpoint == 'technician_calendar' %}
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.role == 'technician' %}
+                            {% set target = 'technician_calendar' %}
+                        {% elif current_user.role in ['staff','manager','general_manager'] %}
+                            {% set target = 'staff_calendar' %}
+                        {% else %}
+                            {% set target = None %}
+                        {% endif %}
+                    {% else %}
+                        {% set target = None %}
+                    {% endif %}
+                    {% if target %}
+                    <li>
+                        <a class="menu-link" href="{{ url_for(target) }}">
+                            <i class="bi bi-{{ menu_icons.get(item.endpoint, 'chevron-right') }}"></i>
+                            <span>{{ item.label }}</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li>
+                    <a class="menu-link" href="{{ url_for(item.endpoint) }}">
+                        <i class="bi bi-{{ menu_icons.get(item.endpoint, 'chevron-right') }}"></i>
+                        <span>{{ item.label }}</span>
+                    </a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            <li class="menu-divider"></li>
+            <li>
+                <form action="{{ url_for('logout') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="menu-link menu-link-danger w-100">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<!-- ================= MAIN ================= -->
+<main class="container py-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+</main>
+
+<!-- ================= MOBILE DOCK ================= -->
+{% if current_user.is_authenticated %}
+<nav class="mobile-glass-dock">
+    <a class="dock-item" href="{{ url_for('dashboard') }}"><i class="bi bi-house"></i><span>Home</span></a>
+    <a class="dock-item {% if notification_count %}has-unread{% endif %}" href="{{ url_for('notifications') }}"><i class="bi bi-bell"></i><span>Alerts</span></a>
+    {% set mobile_calendar_target = None %}
+    {% if current_user.role == 'technician' %}
+        {% set mobile_calendar_target = 'technician_calendar' %}
+    {% elif current_user.role in ['staff', 'desk_staff', 'manager', 'general_manager'] %}
+        {% set mobile_calendar_target = 'staff_calendar' %}
+    {% endif %}
+    {% if mobile_calendar_target %}
+        <a class="dock-item" href="{{ url_for(mobile_calendar_target) }}"><i class="bi bi-calendar-week"></i><span>Calendar</span></a>
+    {% endif %}
+    <a class="dock-item" href="{{ url_for('settings_page') }}"><i class="bi bi-gear"></i><span>Settings</span></a>
+</nav>
+{% endif %}
+<!-- ================= MODALS (FIXED — THIS WAS YOUR MISSING PART) ================= -->
+
+<div class="modal fade" id="appConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 id="appConfirmTitle">Confirm</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p id="appConfirmMessage"></p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="appConfirmCancel">No</button>
+                <button class="btn btn-danger" id="appConfirmOk">Yes</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="appNoticeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 id="appNoticeTitle">Notice</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p id="appNoticeMessage"></p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="appNoticeOk">OK</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================= DATA ================= -->
+<div id="publicHolidayData" style="display:none;">
+    {{ public_holidays|tojson }}
+</div>
+
+<div id="holidayPopupBackdrop" hidden>
+    <div>
+        <h5>Holiday</h5>
+        <p id="holidayPopupText"></p>
+        <button id="holidayPopupClose">Close</button>
+    </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+(function () {
+    const loader = document.getElementById('appLoader');
+    if (!loader) return;
+
+    let activeRequests = 0;
+    const MIN = 220;
+    let shownAt = Date.now();
+
+    function show() {
+        loader.classList.add('is-visible');
+        document.body.classList.add('app-is-loading');
+        shownAt = Date.now();
+    }
+
+    function hide() {
+        setTimeout(() => {
+            if (activeRequests === 0) {
+                loader.classList.remove('is-visible');
+                document.body.classList.remove('app-is-loading');
+            }
+        }, Math.max(0, MIN - (Date.now() - shownAt)));
+    }
+
+    function begin() {
+        activeRequests++;
+        show();
+    }
+
+    function end() {
+        activeRequests = Math.max(0, activeRequests - 1);
+        if (activeRequests === 0) hide();
+    }
+
+    // ================= FETCH =================
+    window.fetch = ((orig) => (input, init = {}) => {
+        if (init.loader === false) return orig(input, init);
+
+        begin();
+        return orig(input, init)
+            .catch(err => { throw err; })
+            .finally(() => end());
+    })(window.fetch);
+
+    // ================= LINK NAVIGATION =================
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+
+        if (
+            link.target === '_blank' ||
+            link.hasAttribute('download') ||
+            link.hasAttribute('data-no-loader') ||
+            e.ctrlKey || e.metaKey || e.shiftKey || e.altKey
+        ) return;
+
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+        const url = new URL(link.href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+
+        show(); // 🔥 THIS was missing
+    });
+
+    // ================= FORM SUBMIT =================
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+
+        if (!form.hasAttribute('data-no-loader')) {
+            setTimeout(() => {
+                if (!e.defaultPrevented) {
+                    show();
+                }
+            }, 0);
+        }
+    });
+
+    // ================= INITIAL PAGE LOAD =================
+    window.addEventListener("load", () => {
+        hide(); // cleaner than manually removing classes
+    });
+
+    // 🔥 FIX: handles back/forward + instant loads
+    window.addEventListener("pageshow", () => {
+        hide();
+    });
+
+    // 🔥 HARD FAILSAFE — never let loader hang
+    setTimeout(() => {
+        hide();
+    }, 1500);
+})();
+</script>
+
+{% if current_user.is_authenticated %}
+<script>
+(function () {
+    const endpoint = "{{ url_for('api_live_dashboard_counts') }}";
+    const bell = document.querySelector('.notification-bell');
+    let pollTimer = null;
+    let stopped = false;
+
+    function setText(selector, value) {
+        document.querySelectorAll(selector).forEach((node) => {
+            node.textContent = value;
+        });
+    }
+
+    function updateBell(count) {
+        if (!bell) return;
+        let badge = bell.querySelector('span');
+        if (count > 0) {
+            bell.classList.add('has-unread');
+            if (!badge) {
+                badge = document.createElement('span');
+                bell.appendChild(badge);
+            }
+            badge.textContent = count;
+        } else {
+            bell.classList.remove('has-unread');
+            if (badge) badge.remove();
+        }
+    }
+
+    function stopPolling() {
+        stopped = true;
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
+    async function refreshLiveCounts() {
+        if (stopped) return;
+        try {
+            const response = await fetch(endpoint, {
+                headers: {'Accept': 'application/json'},
+                loader: false,
+                cache: 'no-store',
+                redirect: 'manual'
+            });
+
+            const isAuthRedirect = response.status === 401 || response.status === 403 || response.redirected || (response.status >= 300 && response.status < 400);
+            if (isAuthRedirect) {
+                const location = response.headers.get('Location');
+                stopPolling();
+                if (location) {
+                    window.location.assign(location);
+                }
+                return;
+            }
+
+            if (!response.ok) return;
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                stopPolling();
+                return;
+            }
+
+            const payload = await response.json();
+            const counts = payload.counts || {};
+            Object.keys(counts).forEach((key) => {
+                setText(`[data-count-key="${key}"]`, counts[key]);
+            });
+            updateBell(Number(payload.notification_count || 0));
+        } catch (err) {
+            // Live refresh should never interrupt normal work.
+        }
+    }
+
+    refreshLiveCounts();
+    pollTimer = window.setInterval(refreshLiveCounts, 30000);
+})();
+</script>
+{% endif %}
+
+<script>
+(function() {
+    var modal = document.getElementById('appConfirmModal');
+    var modalInstance = modal ? new bootstrap.Modal(modal) : null;
+    var confirmTitle = document.getElementById('appConfirmTitle');
+    var confirmMessage = document.getElementById('appConfirmMessage');
+    var confirmOk = document.getElementById('appConfirmOk');
+    var confirmCancel = document.getElementById('appConfirmCancel');
+    var pendingForm = null;
+
+    document.addEventListener('submit', function(e) {
+        var form = e.target.closest('form[data-confirm-message]');
+        if (!form) return;
+        e.preventDefault();
+        pendingForm = form;
+        if (confirmTitle) confirmTitle.textContent = form.getAttribute('data-confirm-title') || 'Confirm';
+        if (confirmMessage) confirmMessage.textContent = form.getAttribute('data-confirm-message') || '';
+        if (confirmOk) confirmOk.textContent = form.getAttribute('data-confirm-label') || 'Yes';
+        if (modalInstance) modalInstance.show();
+    });
+
+    if (confirmCancel) {
+        confirmCancel.addEventListener('click', function() {
+            pendingForm = null;
+            if (modalInstance) modalInstance.hide();
+        });
+    }
+
+    if (confirmOk) {
+        confirmOk.addEventListener('click', function() {
+            if (pendingForm) {
+                pendingForm.submit();
+            }
+        });
+    }
+})();
+</script>
+
+{% block scripts %}{% endblock %}
+
+<script>
+(function(){
+    const toggle = document.querySelector('button[data-bs-target="#offcanvasMenu"]');
+    if (!toggle) return;
+    toggle.addEventListener('click', function () {
+        const off = document.getElementById('offcanvasMenu');
+        if (!off) return;
+        try {
+            const inst = bootstrap.Offcanvas.getInstance(off) || new bootstrap.Offcanvas(off);
+            setTimeout(() => {
+                if (!off.classList.contains('show')) inst.show();
+            }, 30);
+        } catch (e) {
+            // ignore — non-fatal
+        }
+    });
+})();
+</script>
+
+</body>
+<div class="app-version" aria-hidden="true">Version <small>1.0.0</small></div>
+</html>

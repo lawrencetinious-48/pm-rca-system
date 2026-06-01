@@ -1,0 +1,654 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="consumables-shell">
+  {# Header #}
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+      <h1 class="mb-0"><i class="bi bi-box-seam me-2"></i>Consumable Requests</h1>
+      <p class="text-muted small mb-0">Teams submit consumable requests here for staff review.</p>
+    </div>
+    <span class="badge bg-secondary fs-6 px-3 py-2">
+      <i class="bi bi-database me-1"></i> {{ pagination.total if pagination else consumables|length }} requests
+    </span>
+  </div>
+
+  {% if request.args.get('submitted') == '1' %}
+  <div class="alert alert-success border mb-3">
+    <i class="bi bi-check-circle-fill me-2"></i>Consumable submitted to staff for review. It is now waiting in the review queue.
+  </div>
+  {% endif %}
+
+  {# Add new consumable card (visible to staff & technicians only) #}
+  {% set _cons_role = normalize_role(current_user.role) %}
+  {% if _cons_role in ['staff', 'technician'] %}
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-transparent border-bottom-0 pt-3">
+      <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>New Consumable Request</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" class="row g-3" id="consumableRequestForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Site ID <span class="text-danger">*</span></label>
+          <input type="text" name="site_id" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Site Name <span class="text-danger">*</span></label>
+          <input type="text" name="site_name" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Submitted By</label>
+          <input type="text" name="created_by_display" class="form-control" value="{{ current_user.email }}" readonly disabled>
+          <input type="hidden" name="created_by" value="{{ current_user.email }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Location</label>
+          <input type="text" name="location" class="form-control" placeholder="e.g., 0.4591N 31.6836E">
+          <div class="form-text">Optional GPS coordinates or address.</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+          <textarea name="description" class="form-control" rows="2" required></textarea>
+        </div>
+        
+        <div class="col-12">
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0"><i class="bi bi-image me-2"></i>Photos</h6>
+            <small class="text-muted">Capture the consumable before repair and the finished result.</small>
+          </div>
+          <div class="alert alert-light border mb-3 py-2 px-3" id="imageUploadStatus">
+            <i class="bi bi-camera me-1"></i>Upload a before photo and an after photo. PNG, JPG, JPEG, GIF, and WEBP are supported.
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div id="imageUploadContainer" class="row g-3">
+            <div class="image-upload-item col-12">
+              <div class="card border-light consumable-photo-card">
+                <div class="card-body p-3">
+                  <div class="row g-3 align-items-stretch">
+                    <div class="col-md-4">
+                      <label class="form-label fw-semibold">Before Usage Label <span class="text-danger">*</span></label>
+                      <input type="text" name="before_usage_label" class="form-control" value="Before usage" required>
+                    </div>
+                    <div class="col-md-5">
+                      <label class="form-label fw-semibold">Before Usage Photo <span class="text-danger">*</span></label>
+                      <label class="consumable-photo-upload-shell">
+                        <input type="file" name="before_usage_image" class="visually-hidden consumable-image-input" accept="image/*" capture="environment" required>
+                        <span class="consumable-photo-upload-icon"><i class="bi bi-camera"></i></span>
+                        <span class="consumable-photo-upload-text">Tap to add before photo</span>
+                        <small class="consumable-photo-status text-muted">Take the photo before any work is done.</small>
+                        <img class="consumable-photo-preview" alt="Before usage preview" hidden>
+                      </label>
+                      <div class="form-text">Use camera or gallery for a clear photo and retake if needed.</div>
+                    </div>
+                    <div class="col-md-3 d-flex flex-column gap-2 justify-content-end">
+                      <button type="button" class="btn btn-outline-warning consumable-photo-clear-button" style="display: none;">
+                        <i class="bi bi-arrow-repeat me-1"></i>Delete & retake
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="image-upload-item col-12">
+              <div class="card border-light consumable-photo-card">
+                <div class="card-body p-3">
+                  <div class="row g-3 align-items-stretch">
+                    <div class="col-md-4">
+                      <label class="form-label fw-semibold">After Usage Label <span class="text-danger">*</span></label>
+                      <input type="text" name="after_usage_label" class="form-control" value="After usage" required>
+                    </div>
+                    <div class="col-md-5">
+                      <label class="form-label fw-semibold">After Usage Photo <span class="text-danger">*</span></label>
+                      <label class="consumable-photo-upload-shell">
+                        <input type="file" name="after_usage_image" class="visually-hidden consumable-image-input" accept="image/*" capture="environment" required>
+                        <span class="consumable-photo-upload-icon"><i class="bi bi-camera"></i></span>
+                        <span class="consumable-photo-upload-text">Tap to add after photo</span>
+                        <small class="consumable-photo-status text-muted">Take the photo after the consumable is resolved.</small>
+                        <img class="consumable-photo-preview" alt="After usage preview" hidden>
+                      </label>
+                      <div class="form-text">Use camera or gallery for a clear photo and retake if needed.</div>
+                    </div>
+                    <div class="col-md-3 d-flex flex-column gap-2 justify-content-end">
+                      <button type="button" class="btn btn-outline-warning consumable-photo-clear-button" style="display: none;">
+                        <i class="bi bi-arrow-repeat me-1"></i>Delete & retake
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-12 text-end pt-3">
+          <button type="submit" class="btn btn-primary px-4" id="consumableSubmitBtn">
+            <i class="bi bi-send me-2"></i>Submit request to staff
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Search and filter card #}
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-md-8">
+          <label class="form-label fw-semibold">Search consumables</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+            <input type="search" name="q" class="form-control" value="{{ search_query or '' }}" 
+                   placeholder="Search by site ID, site name, description, or creator">
+          </div>
+        </div>
+        <div class="col-6 col-md-2 d-grid">
+          <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+        <div class="col-6 col-md-2 d-grid">
+          <a class="btn btn-outline-secondary" href="{{ url_for('consumables') }}">Clear</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Consumables table (responsive) #}
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 consumables-table">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Site ID</th>
+              <th>Site Name</th>
+              <th>Description</th>
+              <th>Created By</th>
+              <th>Created Date</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in consumables %}
+            <tr>
+              <td data-label="#">#{{ loop.index }}</td>
+              <td data-label="Site ID">{{ item.site_id }}</td>
+              <td data-label="Site Name">{{ item.site_name }}</td>
+              <td data-label="Description">{{ item.description|truncate(80) }}</td>
+              <td data-label="Created By">{{ item.created_by }}</td>
+              <td data-label="Created Date">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td data-label="Status">
+                {% if item.is_approved %}
+                  <span class="badge bg-success">Approved</span>
+                {% elif item.approved_at %}
+                  <span class="badge bg-danger">Rejected</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+              </td>
+              <td data-label="Actions" class="text-end">
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" class="btn btn-outline-primary" 
+                          data-bs-toggle="modal" data-bs-target="#consumableDetailModal"
+                          data-item-id="{{ item.id }}"
+                          data-site-id="{{ item.site_id }}"
+                          data-site-name="{{ item.site_name }}"
+                          data-description="{{ item.description|e }}"
+                          data-created-by="{{ item.created_by }}"
+                          data-created-date="{{ item.created_at.strftime('%Y-%m-%d %H:%M:%S') }}"
+                          data-location="{{ item.location or '' }}"
+                          data-before="{{ item.before_usage_image_url or '' }}"
+                          data-after="{{ item.screenshot_url or '' }}"
+                          title="Quick view">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <a href="{{ url_for('consumable_detail', item_id=item.id) }}" class="btn btn-outline-secondary" title="Full page">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                  </a>
+                  {% set consumable_review_role = normalize_role(current_user.role) %}
+                  {% if consumable_review_role in ['staff', 'manager', 'general_manager'] and not item.is_approved and not item.approved_at %}
+                    <button type="button" class="btn btn-outline-success consumable-approve-btn" data-item-id="{{ item.id }}" title="Approve this request">
+                      <i class="bi bi-check-circle"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger consumable-reject-btn" data-item-id="{{ item.id }}" title="Reject this request">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mb-0 mt-2">No consumables found.</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# Pagination #}
+  {% if pagination and pagination.pages > 1 %}
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+    <p class="text-muted small mb-0">
+      Showing {{ consumables|length }} of {{ pagination.total }} consumables on page {{ pagination.page }} of {{ pagination.pages }}.
+    </p>
+    <nav aria-label="Consumables pagination">
+      <ul class="pagination pagination-sm mb-0 flex-wrap">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('consumables', q=search_query or None, page=pagination.prev_num, per_page=pagination.per_page) if pagination.has_prev else '#' }}">
+            <i class="bi bi-chevron-left"></i> Previous
+          </a>
+        </li>
+        {% for page_num in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+          {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('consumables', q=search_query or None, page=page_num, per_page=pagination.per_page) }}">{{ page_num }}</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('consumables', q=search_query or None, page=pagination.next_num, per_page=pagination.per_page) if pagination.has_next else '#' }}">
+            Next <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+
+{# Modal for quick view #}
+<div class="modal fade" id="consumableDetailModal" tabindex="-1" aria-labelledby="consumableDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="consumableDetailModalLabel"><i class="bi bi-box-seam me-2"></i>Consumable Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6"><strong>Site ID:</strong> <span id="modalSiteId"></span></div>
+          <div class="col-md-6"><strong>Created Date:</strong> <span id="modalCreatedDate"></span></div>
+          <div class="col-md-6"><strong>Site Name:</strong> <span id="modalSiteName"></span></div>
+          <div class="col-md-6"><strong>Created By:</strong> <span id="modalCreatedBy"></span></div>
+          <div class="col-12"><strong>Description:</strong> <span id="modalDescription"></span></div>
+          <div class="col-12"><strong>Location:</strong> <span id="modalLocation"></span></div>
+        </div>
+        <hr>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <h6 class="mb-2">Before Usage</h6>
+            <img id="modalBeforeUsage" class="img-fluid rounded border detail-modal-image" style="max-height: 200px; width: auto;" alt="Before Usage">
+          </div>
+          <div class="col-md-6">
+            <h6 class="mb-2">After Usage</h6>
+            <img id="modalAfterUsage" class="img-fluid rounded border detail-modal-image" style="max-height: 200px; width: auto;" alt="After Usage">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="modalOpenPageLink" class="btn btn-outline-secondary" href="#">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Open Full Page
+        </a>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function resolveConsumableImageUrl(rawValue) {
+    if (!rawValue) return '';
+    const trimmed = String(rawValue).trim();
+    if (!trimmed) return '';
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.find(Boolean) || '';
+      }
+      if (parsed && typeof parsed === 'object') {
+        const afterValue = parsed.after || parsed['After usage'] || parsed['After'] || parsed['after_usage'];
+        if (typeof afterValue === 'string' && afterValue.trim()) {
+          return afterValue.trim();
+        }
+        const firstValue = Object.values(parsed).find(value => typeof value === 'string' && value.trim());
+        return typeof firstValue === 'string' ? firstValue : '';
+      }
+    } catch (_err) {
+      return trimmed;
+    }
+
+    return trimmed;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('consumableDetailModal');
+    if (!modal) return;
+
+    function setImageOrPlaceholder(el, url) {
+      const resolved = resolveConsumableImageUrl(url);
+      if (resolved) {
+        el.src = resolved;
+        el.style.display = 'block';
+      } else {
+        el.removeAttribute('src');
+        el.style.display = 'none';
+        const parent = el.parentElement;
+        const placeholder = parent.querySelector('.image-placeholder');
+        if (!placeholder) {
+          const fallback = document.createElement('div');
+          fallback.className = 'image-placeholder text-muted text-center py-4 bg-light rounded';
+          fallback.innerHTML = '<i class="bi bi-image fs-1"></i><p class="mb-0 small">No image</p>';
+          parent.appendChild(fallback);
+          el.style.display = 'none';
+        }
+      }
+    }
+
+    modal.addEventListener('show.bs.modal', function (event) {
+      const trigger = event.relatedTarget;
+      if (!trigger) return;
+
+      const itemId = trigger.getAttribute('data-item-id') || '';
+      document.getElementById('modalSiteId').textContent = trigger.getAttribute('data-site-id') || '-';
+      document.getElementById('modalCreatedDate').textContent = trigger.getAttribute('data-created-date') || '-';
+      document.getElementById('modalSiteName').textContent = trigger.getAttribute('data-site-name') || '-';
+      document.getElementById('modalCreatedBy').textContent = trigger.getAttribute('data-created-by') || '-';
+      document.getElementById('modalDescription').textContent = trigger.getAttribute('data-description') || '-';
+      document.getElementById('modalLocation').textContent = trigger.getAttribute('data-location') || '-';
+
+      setImageOrPlaceholder(document.getElementById('modalBeforeUsage'), trigger.getAttribute('data-before') || '');
+      setImageOrPlaceholder(document.getElementById('modalAfterUsage'), trigger.getAttribute('data-after') || '');
+
+      const openLink = document.getElementById('modalOpenPageLink');
+      if (openLink) openLink.href = "{{ url_for('consumable_detail', item_id=0) }}".replace('0', itemId);
+    });
+  });
+
+  const consumableForm = document.getElementById('consumableRequestForm');
+  const consumableSubmitBtn = document.getElementById('consumableSubmitBtn');
+  if (consumableForm && consumableSubmitBtn) {
+    consumableForm.addEventListener('submit', async function (evt) {
+      // Use progressive enhancement: try fetch-based submit for better error reporting.
+      try {
+        evt.preventDefault();
+        consumableSubmitBtn.disabled = true;
+        const origHtml = consumableSubmitBtn.innerHTML;
+        consumableSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+
+        const action = consumableForm.getAttribute('action') || window.location.pathname + window.location.search;
+        const method = (consumableForm.getAttribute('method') || 'POST').toUpperCase();
+        const formData = new FormData(consumableForm);
+
+        consumableForm.querySelectorAll('input[type="file"].consumable-image-input').forEach((input) => {
+          if (input._processedFile) {
+            formData.delete(input.name);
+            formData.append(input.name, input._processedFile, input._processedFile.name);
+          }
+        });
+
+        const headers = {};
+        const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+        if (metaCsrf && metaCsrf.content) headers['X-CSRF-Token'] = metaCsrf.content;
+
+        const res = await fetch(action, {
+          method,
+          body: formData,
+          credentials: 'same-origin',
+          headers,
+        });
+
+        if (!res.ok) {
+          // try to parse JSON error message, otherwise include raw text
+          let msg = `Failed to submit the form (status ${res.status}). Please refresh the page and try again.`;
+          try {
+            const j = await res.json();
+            if (j && j.message) {
+              msg = j.message;
+            } else if (typeof j === 'string' && j.trim()) {
+              msg = j;
+            }
+          } catch (_e) {
+            try {
+              const text = await res.text();
+              if (text && text.trim()) msg = text.trim();
+            } catch (_t) {}
+          }
+          document.getElementById('appNoticeTitle').textContent = 'Submission failed';
+          document.getElementById('appNoticeMessage').textContent = msg;
+          const notice = new bootstrap.Modal(document.getElementById('appNoticeModal'));
+          notice.show();
+          consumableSubmitBtn.disabled = false;
+          consumableSubmitBtn.innerHTML = origHtml;
+          return;
+        }
+
+        // On HTML redirect, follow via location if possible
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const data = await res.json();
+          if (data && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+          }
+        }
+
+        // If server responded with a redirect (HTML), try to navigate to current location to pick it up
+        window.location.reload();
+      } catch (err) {
+        const msg = `Failed to submit the form (status 0). Please refresh the page and try again.\n\nDetails: ${err && err.message ? err.message : err}`;
+        document.getElementById('appNoticeTitle').textContent = 'Submission failed';
+        document.getElementById('appNoticeMessage').textContent = msg;
+        const notice = new bootstrap.Modal(document.getElementById('appNoticeModal'));
+        notice.show();
+        consumableSubmitBtn.disabled = false;
+        consumableSubmitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Submit request to staff';
+      }
+    });
+  }
+
+  function resetConsumablePhoto(item) {
+    const input = item.querySelector('.consumable-image-input');
+    const placeholder = item.querySelector('.consumable-photo-upload-shell');
+    const previewImage = item.querySelector('.consumable-photo-preview');
+    const clearButton = item.querySelector('.consumable-photo-clear-button');
+    const statusText = item.querySelector('.consumable-photo-status');
+
+    if (input) {
+      input.value = '';
+    }
+    if (previewImage) {
+      previewImage.removeAttribute('src');
+      previewImage.hidden = true;
+      previewImage.style.display = 'none';
+    }
+    if (placeholder) {
+      placeholder.classList.remove('has-preview');
+    }
+    if (clearButton) {
+      clearButton.style.display = 'none';
+    }
+    if (statusText) {
+      statusText.textContent = 'Clear, well-lit photos work best.';
+      statusText.className = 'consumable-photo-status text-muted';
+    }
+  }
+
+  function setUploadStatus(message, tone) {
+    const statusBox = document.getElementById('imageUploadStatus');
+    if (!statusBox) return;
+    statusBox.className = `alert ${tone} border mb-3 py-2 px-3`;
+    statusBox.innerHTML = message;
+  }
+
+  function humanReadableBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  }
+
+  async function compressConsumableImage(file, quality = 0.78, maxDimension = 1600) {
+    const imageBitmap = await createImageBitmap(file);
+    let width = imageBitmap.width;
+    let height = imageBitmap.height;
+    const scale = Math.min(1, maxDimension / Math.max(width, height));
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Image compression failed.'));
+          return;
+        }
+        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }));
+      }, 'image/jpeg', quality);
+    });
+  }
+
+  async function processConsumableImage(file) {
+    const maxSize = 4 * 1024 * 1024;
+    const maxDimension = 1600;
+    const needsResize = file.size > maxSize;
+    if (!needsResize) {
+      return file;
+    }
+    return compressConsumableImage(file, 0.78, maxDimension);
+  }
+
+  function bindConsumablePhotoInput(input) {
+    const item = input.closest('.image-upload-item');
+    const placeholder = item.querySelector('.consumable-photo-upload-shell');
+    const previewImage = item.querySelector('.consumable-photo-preview');
+    const clearButton = item.querySelector('.consumable-photo-clear-button');
+    const statusText = item.querySelector('.consumable-photo-status');
+
+    input.addEventListener('change', async function() {
+      const file = input.files && input.files[0];
+
+      if (!file) {
+        resetConsumablePhoto(item);
+        setUploadStatus('<i class="bi bi-camera me-1"></i>Upload a before photo and an after photo. PNG, JPG, JPEG, GIF, and WEBP are supported.', 'alert-light');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        resetConsumablePhoto(item);
+        setUploadStatus(`<i class="bi bi-exclamation-triangle me-1"></i>${file.name} is not a supported image. Please choose a photo file only.`, 'alert-danger');
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        resetConsumablePhoto(item);
+        setUploadStatus(`<i class="bi bi-exclamation-triangle me-1"></i>${file.name} is larger than 10MB. Please choose a smaller image.`, 'alert-warning');
+        return;
+      }
+
+      statusText.textContent = 'Processing image…';
+      statusText.className = 'consumable-photo-status text-muted';
+      setUploadStatus(`<i class="bi bi-hourglass-split me-1"></i>Processing ${file.name} before upload…`, 'alert-info');
+
+      try {
+        const processedFile = await processConsumableImage(file);
+        input._processedFile = processedFile;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          previewImage.src = event.target.result;
+          previewImage.hidden = false;
+          previewImage.style.display = 'block';
+          placeholder.classList.add('has-preview');
+          clearButton.style.display = 'inline-flex';
+          statusText.textContent = `${processedFile.name} (${humanReadableBytes(processedFile.size)}) is ready.`;
+          statusText.className = 'consumable-photo-status text-success';
+          setUploadStatus(`<i class="bi bi-check-circle me-1"></i>${processedFile.name} ready for upload (${humanReadableBytes(processedFile.size)}).`, 'alert-success');
+        };
+        reader.readAsDataURL(processedFile);
+      } catch (err) {
+        console.error('Consumable image process failed:', err);
+        resetConsumablePhoto(item);
+        setUploadStatus(`<i class="bi bi-exclamation-triangle me-1"></i>Unable to process ${file.name}. Please choose another photo.`, 'alert-danger');
+      }
+    });
+
+    clearButton.addEventListener('click', function() {
+      resetConsumablePhoto(item);
+      setUploadStatus('<i class="bi bi-camera me-1"></i>Image removed. Choose another clear photo to replace it.', 'alert-warning');
+    });
+  }
+
+  document.querySelectorAll('.consumable-image-input').forEach(bindConsumablePhotoInput);
+
+  function confirmReviewAction(button, action, defaultMessage) {
+    const itemId = button.getAttribute('data-item-id');
+    if (!itemId) {
+      return;
+    }
+    const confirmation = confirm(`Are you sure you want to ${action} consumable #${itemId}?`);
+    if (!confirmation) {
+      return;
+    }
+    const payload = { review_notes: defaultMessage };
+    if (action === 'approve') {
+      payload.treatment_given = 'Approved from review list view.';
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+    if (metaCsrf && metaCsrf.content) {
+      headers['X-CSRF-Token'] = metaCsrf.content;
+    }
+
+    fetch(`/api/consumables/${itemId}/${action}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+    })
+      .then(response => response.json().then(data => ({ ok: response.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          alert(`Unable to ${action}: ${data.message || 'check input'}`);
+          return;
+        }
+        window.location.reload();
+      })
+      .catch(err => {
+        alert(`Unable to ${action} consumable: ${err.message}`);
+      });
+  }
+
+  document.querySelectorAll('.consumable-approve-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      confirmReviewAction(this, 'approve', 'Approved from list view.');
+    });
+  });
+
+  document.querySelectorAll('.consumable-reject-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      confirmReviewAction(this, 'reject', 'Rejected from list view.');
+    });
+  });
+</script>
+{% endblock %}

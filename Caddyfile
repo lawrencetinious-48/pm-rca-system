@@ -1,0 +1,58 @@
+# Caddyfile for PM/RCA system
+{
+    # Use Let's Encrypt in production. For local development, you can use:
+    # local_certs
+}
+
+{$SERVER_NAME:localhost} {
+    encode gzip zstd
+
+    tls {
+        # For local/LAN testing, keep 'internal' to use Caddy's internal CA.
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+        level INFO
+    }
+
+    handle /health {
+        reverse_proxy web:8000
+    }
+
+    reverse_proxy web:8000 {
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
+        lb_policy round_robin
+        flush_interval -1
+        buffer_requests
+        buffer_responses
+        dial_timeout 5s
+        read_timeout 60s
+        write_timeout 60s
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    handle_errors {
+        respond "{err.status_code} {err.status_text}"
+    }
+}

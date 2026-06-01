@@ -1,0 +1,130 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+{% from '_feature_cards.html' import feature_card %}
+<div class="role-dashboard-shell role-general-manager">
+  <section class="dashboard-hero-lite mb-4">
+    <p class="text-muted small mb-2">General manager workspace</p>
+    <h1 class="h3 mb-2">Welcome, {{ current_user.display_name or current_user.email }}</h1>
+    <p class="text-muted mb-0">Hello {{ current_user.display_name or current_user.email }}, welcome to your workspace.</p>
+  </section>
+
+  {# Stats Row #}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 mt-1">
+    <div class="col">
+      <a href="{{ url_for('desk_activities', mode='forms', type='rca', review='reviewed') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-stack"></i></div>
+            <h1 class="display-5 fw-bold">{{ reviewed_rca_forms or 0 }}</h1>
+            <p class="text-muted mb-0">Reviewed RCAs<br><span class="small">(Approved + Rejected)</span></p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col">
+      <a href="{{ url_for('consumables') }}" class="card-link text-decoration-none">
+        <div class="card stats-card h-100">
+          <div class="card-body text-center">
+            <div class="stats-icon mx-auto mb-2"><i class="bi bi-box-seam"></i></div>
+            <h1 class="display-5 fw-bold">{{ consumables_count }}</h1>
+            <p class="text-muted mb-0">Consumables</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    {# Optional: add more stats like "Pending High Risk" or "SLA Overdue" if needed #}
+  </div>
+
+  {# SLA Policy Summary Card #}
+  <section class="mt-4 mb-4">
+    <div class="card form-access-card sla-policy-summary-card border-0 shadow-sm">
+      <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-alarm-fill text-primary fs-4"></i>
+            <h3 class="mb-0">Desk SLA Policy</h3>
+          </div>
+          <p class="text-muted mb-2">
+            {% if active_sla_policy.enabled %}
+              Active policy: <strong>{{ active_sla_policy.standard_hours }}h</strong> standard PM,
+              <strong>{{ active_sla_policy.critical_hours }}h</strong> critical/RCA,
+              due soon at <strong>{{ active_sla_policy.due_soon_hours }}h</strong>.
+            {% else %}
+              SLA is currently <strong>inactive</strong> for new desk submissions.
+            {% endif %}
+          </p>
+          <div class="small text-muted">
+            <i class="bi bi-person-circle me-1"></i>Last updated by {{ active_sla_policy.updated_by }}
+          </div>
+        </div>
+        <a href="{{ url_for('settings_page') }}" class="btn btn-outline-primary btn-lg">
+          <i class="bi bi-sliders me-1"></i> Manage SLA Policy
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {% if monthly_archive %}
+  <section class="mt-4 mb-4">
+    <div class="card form-access-card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+          <div>
+            <h3 class="mb-1"><i class="bi bi-calendar2-check me-2"></i>Monthly Records Archive</h3>
+            <p class="text-muted mb-0">Review monthly PM/RCA history and approval outcomes.</p>
+          </div>
+        </div>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+          {% for month in monthly_archive %}
+          <div class="col">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="fw-semibold mb-2">{{ month.label }}</div>
+              <p class="mb-1"><strong>{{ month.total }}</strong> total records</p>
+              <p class="mb-1 text-warning">{{ month.pending }} pending</p>
+              <p class="mb-1 text-success">{{ month.approved }} approved</p>
+              <p class="mb-0 text-danger">{{ month.rejected }} rejected</p>
+              <a class="btn btn-sm btn-outline-primary mt-3" href="{{ url_for('desk_activities', mode='forms', month=month.key) }}">Open archive</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# Feature Cards – Review Oversight #}
+  <section class="mt-4 mb-4">
+    <div class="feature-group-title mb-3">
+      <i class="bi bi-eye-fill me-2"></i>Review Oversight
+    </div>
+    <div class="row row-cols-1 row-cols-lg-2 g-4">
+      <div class="col">
+        {% call feature_card('RCA Tracker', 'Open the reviewed RCA tracker and export from the same place.', 'bi-table') %}
+          <a href="{{ url_for('desk_rca_tracker') }}" class="btn btn-success">
+            <i class="bi bi-table me-1"></i>Open RCA Tracker
+          </a>
+        {% endcall %}
+      </div>
+      <div class="col">
+        {% call feature_card('SLA System', 'Open the reviewed‑RCA SLA awareness board and due‑state summary.', 'bi-speedometer2') %}
+          <a href="{{ url_for('desk_sla_system') }}" class="btn btn-outline-primary">
+            <i class="bi bi-speedometer2 me-1"></i>Open SLA System
+          </a>
+          <a href="{{ url_for('settings_page') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-sliders me-1"></i>SLA Settings
+          </a>
+        {% endcall %}
+      </div>
+    </div>
+  </section>
+
+  {% include '_dashboard_analytics.html' %}
+
+  {# Footer #}
+  <p class="text-center text-muted small mt-4 mb-0">
+    <i class="bi bi-info-circle-fill me-1"></i>Dashboard Footnote: General Manager
+  </p>
+</div>
+{% endblock %}
